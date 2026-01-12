@@ -1,0 +1,17 @@
+{
+  "name": "snowmead-marketplace",
+  "owner": {
+    "name": "snowmead"
+  },
+  "metadata": {
+    "description": "Plugin marketplace for UltraThink reasoning framework integrating Chain of Verification and Atom of Thoughts",
+    "version": "1.0.0"
+  },
+  "plugins": [
+    {
+      "name": "questionably-ultrathink",
+      "description": "Advanced reasoning plugin integrating Chain of Verification (CoVe) and Atom of Thoughts (AoT) frameworks for rigorous, verifiable analysis",
+      "source": "./"
+    }
+  ]
+}
