@@ -8,11 +8,11 @@ allowed-tools: [Skill, Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuest
 
 The user has requested full UltraThink analysis.
 
-**Immediately invoke the questionably-ultrathink skill** using the Skill tool to execute the full pipeline:
+**Immediately invoke the questionably-ultrathink-skill** using the Skill tool to execute the full pipeline:
 
 Use the Skill tool with:
 
-- skill: "questionably-ultrathink"
+- skill: "questionably-ultrathink-skill"
 - args: "$ARGUMENTS"
 
 The skill contains the complete orchestration protocol for:

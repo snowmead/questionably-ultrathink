@@ -1,5 +1,5 @@
 ---
-name: questionably-ultrathink
+name: questionably-ultrathink-skill
 description: |
   Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
 

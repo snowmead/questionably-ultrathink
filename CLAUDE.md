@@ -21,7 +21,7 @@ questionably-ultrathink/
 │   ├── decompose.md         # /decompose - AoT only
 │   └── verify.md            # /verify - CoVe only
 ├── skills/
-│   └── questionably-ultrathink/
+│   └── questionably-ultrathink-skill/
 │       └── SKILL.md         # Main skill orchestration with pipeline steps
 ├── agents/
 │   ├── atom-of-thoughts.md  # AoT agent - initial decomposition (haiku model)
@@ -34,7 +34,9 @@ questionably-ultrathink/
 ## How Components Connect
 
 1. **Commands** (`/questionably-ultrathink`, `/decompose`, `/verify`) are entry points that invoke either the skill or agents directly
-2. **Skill** (`skills/questionably-ultrathink/SKILL.md`) orchestrates the full pipeline by chaining agent calls
+2. **Skill** (`skills/questionably-ultrathink-skill/SKILL.md`) orchestrates the full pipeline by chaining agent calls
+
+**Note:** The skill is named `questionably-ultrathink-skill` (not `questionably-ultrathink`) to avoid naming collision with the command. When the Skill tool looks up by name, having different names ensures the correct component is loaded.
 3. **Agents** are subagents invoked via the `Task` tool with `subagent_type`:
    - `atom-of-thoughts` - Initial problem decomposition
    - `chain-of-verification` - Verifies atoms and writes corrections
