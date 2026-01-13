@@ -34,32 +34,35 @@ This installs dependencies (lefthook, comrak) if missing and sets up git hooks f
 ### `/questionably-ultrathink`
 Run the full reasoning pipeline on a problem:
 1. Clarifies intent if needed
-2. Decomposes into atomic questions (AoT)
-3. Verifies critical atoms (CoVe)
-4. Synthesizes and verifies final response
+2. Selects analysis rigor (standard/thorough/high-stakes)
+3. Decomposes into atomic questions (AoT) with complexity flagging
+4. Verifies critical atoms in parallel by dependency level (CoVe)
+5. Propagates corrections and recomputes dependent atoms
+6. Synthesizes and verifies final response
+7. Iterates if confidence is below threshold (thorough/high-stakes only)
 
 ```
 /questionably-ultrathink analyze whether this authentication approach is secure
 ```
 
-### `/questionably-ultrathink:decompose`
+### `/decompose`
 Break down a complex problem into atomic sub-questions:
 
 ```
-/questionably-ultrathink:decompose how does React's reconciliation work and compare to Vue?
+/decompose how does React's reconciliation work and compare to Vue?
 ```
 
-### `/questionably-ultrathink:verify`
+### `/verify`
 Verify factual claims in the most recent response:
 
 ```
-/questionably-ultrathink:verify
+/verify
 ```
 
 Or verify specific content:
 
 ```
-/questionably-ultrathink:verify the performance benchmarks mentioned above
+/verify the performance benchmarks mentioned above
 ```
 
 ## Automatic Activation
@@ -71,6 +74,27 @@ The skill automatically activates when you use trigger phrases:
 - Complex multi-part questions
 - Architecture or security decisions
 
+## Rigor Levels
+
+When running the full pipeline, you can select analysis depth:
+
+| Level | Iterations | Verification | Confidence Target | Use Case |
+|-------|------------|--------------|-------------------|----------|
+| **Standard** | 1 | Flagged atoms only | N/A | Most questions |
+| **Thorough** | Up to 2 | Atoms with factual claims | ≥70% | Important decisions |
+| **High-Stakes** | Up to 3 | ALL atoms | ≥85% | Security, architecture, production |
+
+## Optional: Parallel.ai MCP Integration
+
+The plugin includes optional MCP servers for enhanced web search during verification:
+
+- `parallel-search` - Optimized fact-checking searches
+- `parallel-task` - Deep research capabilities
+
+**Setup:** Run `/mcp` in Claude Code and authenticate with Parallel.ai to enable them.
+
+**Fallback:** The plugin works fully without MCP authentication, using native `WebSearch` and `WebFetch` tools.
+
 ## How It Works
 
 ### Atom of Thoughts (AoT)
@@ -79,10 +103,12 @@ Based on the paper ["Atom of Thoughts for Markov LLM Test-Time Scaling"](https:/
 
 Key features:
 - Decomposes problems into atomic questions
-- Builds a DAG of dependencies
+- Builds a DAG of dependencies with topological levels
 - Solves independent atoms in parallel
 - Contracts solved atoms into minimal context for dependent atoms
 - Follows Markov property (each step depends only on immediate dependencies)
+- Flags atoms requiring verification (`needs_cov`) based on complexity heuristics
+- Persists reasoning to files for inter-agent communication
 
 ### Chain of Verification (CoVe)
 
@@ -94,6 +120,8 @@ Key features:
 - Answers each question **independently** (factored execution)
 - Compares independent answers to original claims
 - Reports inconsistencies with corrections
+- Verifies atoms in parallel by dependency level
+- Writes corrections to disk, triggering recomputation of dependent atoms
 
 ## Output Format
 
@@ -102,15 +130,20 @@ Key features:
 ## Atom of Thoughts Decomposition
 
 ### Dependency Graph
-- [A1] What auth standard fits a stateless API? (independent)
-- [A2] Where should tokens be validated? (independent)
-- [A3] How should tokens be stored client-side? (depends: A1)
-- [FINAL] Complete auth approach recommendation (depends: A2, A3)
+- [ATOM:A1] What auth standard fits a stateless API? (level 0, needs_cov: true)
+- [ATOM:A2] Where should tokens be validated? (level 0, needs_cov: false)
+- [ATOM:A3] How should tokens be stored client-side? (level 1, deps: [A1], needs_cov: true)
+- [ATOM:FINAL] Complete auth approach recommendation (level 2, deps: [A2, A3])
 
 ### Solutions
-[A1] JWT - stateless, self-contained, widely supported
-[A2] Middleware layer before route handlers
+[ATOM:A1] JWT - stateless, self-contained, widely supported
+[ATOM:A2] Middleware layer before route handlers
 ...
+
+### Verification Summary
+- [ATOM:A1] needs_cov: true, confidence: high
+- [ATOM:A2] needs_cov: false, confidence: high
+- [ATOM:A3] needs_cov: true, confidence: medium
 ```
 
 ### CoVe Report
