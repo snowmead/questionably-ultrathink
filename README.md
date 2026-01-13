@@ -32,7 +32,9 @@ This installs dependencies (lefthook, comrak) if missing and sets up git hooks f
 ## Commands
 
 ### `/questionably-ultrathink`
+
 Run the full reasoning pipeline on a problem:
+
 1. Clarifies intent if needed
 2. Selects analysis rigor (standard/thorough/high-stakes)
 3. Decomposes into atomic questions (AoT) with complexity flagging
@@ -46,6 +48,7 @@ Run the full reasoning pipeline on a problem:
 ```
 
 ### `/decompose`
+
 Break down a complex problem into atomic sub-questions:
 
 ```
@@ -53,6 +56,7 @@ Break down a complex problem into atomic sub-questions:
 ```
 
 ### `/verify`
+
 Verify factual claims in the most recent response:
 
 ```
@@ -78,11 +82,11 @@ The skill automatically activates when you use trigger phrases:
 
 When running the full pipeline, you can select analysis depth:
 
-| Level | Iterations | Verification | Confidence Target | Use Case |
-|-------|------------|--------------|-------------------|----------|
-| **Standard** | 1 | Flagged atoms only | N/A | Most questions |
-| **Thorough** | Up to 2 | Atoms with factual claims | ≥70% | Important decisions |
-| **High-Stakes** | Up to 3 | ALL atoms | ≥85% | Security, architecture, production |
+| Level           | Iterations | Verification              | Confidence Target | Use Case                           |
+| --------------- | ---------- | ------------------------- | ----------------- | ---------------------------------- |
+| **Standard**    | 1          | Flagged atoms only        | N/A               | Most questions                     |
+| **Thorough**    | Up to 2    | Atoms with factual claims | ≥70%              | Important decisions                |
+| **High-Stakes** | Up to 3    | ALL atoms                 | ≥85%              | Security, architecture, production |
 
 ## Optional: Parallel.ai MCP Integration
 
@@ -97,11 +101,70 @@ The plugin includes optional MCP servers for enhanced web search during verifica
 
 ## How It Works
 
+### Architecture
+
+```
+┌───────────────────────────────────────────────────────────────────┐
+│                          User Commands                            │
+│        /questionably-ultrathink  |  /decompose  |  /verify        │
+└─────────────────────────────────┬─────────────────────────────────┘
+                                  │
+                                  ▼
+┌───────────────────────────────────────────────────────────────────┐
+│                       Skill Orchestrator                          │
+│                 (skills/questionably-ultrathink)                  │
+│                                                                   │
+│  1. Clarify intent (AskUserQuestion)                              │
+│  2. Select rigor level                                            │
+│  3. Generate session ID                                           │
+│  4. Invoke agents in sequence                                     │
+│  5. Check for corrections after each verification wave            │
+│  6. Iterate if confidence below threshold                         │
+└───────────┬───────────────────────┬───────────────────┬───────────┘
+            │                       │                   │
+            ▼                       ▼                   ▼
+┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐
+│   atom-of-        │   │   chain-of-       │   │   aot-recompute   │
+│   thoughts        │   │   verification    │   │                   │
+│                   │   │                   │   │                   │
+│ Decomposes        │   │ Verifies atoms    │   │ Updates atoms     │
+│ problem into      │   │ independently     │   │ after CoV         │
+│ atomic DAG        │   │ (factored exec)   │   │ corrections       │
+└─────────┬─────────┘   └─────────┬─────────┘   └─────────┬─────────┘
+          │                       │                       │
+          └───────────────────────┼───────────────────────┘
+                                  │
+                                  ▼
+┌───────────────────────────────────────────────────────────────────┐
+│              .questionably-ultrathink/{session-id}/               │
+│                   (File-Based Communication)                      │
+│                                                                   │
+│  metadata.md            atoms/              corrections/          │
+│  ├─ session_id          ├─ A1.md            ├─ A1.md (if errors)  │
+│  ├─ rigor               ├─ A2.md            └─ ...                │
+│  ├─ atoms (levels)      ├─ A3.md                                  │
+│  └─ verification_order  └─ FINAL.md                               │
+└───────────────────────────────────────────────────────────────────┘
+```
+
+**Data Flow:**
+
+1. **User invokes command** → Skill orchestrator begins
+2. **Orchestrator → AoT**: Decomposes problem, writes `metadata.md` + atom files
+3. **Orchestrator reads** `metadata.md` to get verification order (atoms grouped by dependency level)
+4. **Orchestrator → CoV**: Verifies atoms at each level (parallel within level)
+5. **CoV writes** correction files if errors found
+6. **Orchestrator checks** for corrections after each wave
+7. **If corrections exist → aot-recompute**: Updates dependent atoms with corrected premises
+8. **Recomputed atoms re-verified** before proceeding to next level
+9. **Final synthesis** combines all verified/corrected atoms
+
 ### Atom of Thoughts (AoT)
 
 Based on the paper ["Atom of Thoughts for Markov LLM Test-Time Scaling"](https://arxiv.org/abs/2502.12018) (HKUST, 2025).
 
 Key features:
+
 - Decomposes problems into atomic questions
 - Builds a DAG of dependencies with topological levels
 - Solves independent atoms in parallel
@@ -115,6 +178,7 @@ Key features:
 Based on the paper ["Chain-of-Verification Reduces Hallucination in LLMs"](https://arxiv.org/abs/2309.11495) (Meta AI, 2023).
 
 Key features:
+
 - Extracts verifiable factual claims
 - Generates targeted verification questions
 - Answers each question **independently** (factored execution)
@@ -126,6 +190,7 @@ Key features:
 ## Output Format
 
 ### AoT Decomposition
+
 ```
 ## Atom of Thoughts Decomposition
 
@@ -147,6 +212,7 @@ Key features:
 ```
 
 ### CoVe Report
+
 ```
 ## Chain of Verification Report
 
@@ -175,6 +241,7 @@ After using UltraThink, responses are marked:
 ## When NOT to Use
 
 Skip UltraThink for:
+
 - Simple, direct questions
 - Opinion or recommendation requests
 - Quick lookups where speed matters
