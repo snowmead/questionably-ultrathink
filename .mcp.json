@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "parallel-search": {
+      "type": "http",
+      "url": "https://search-mcp.parallel.ai/mcp"
+    },
+    "parallel-task": {
+      "type": "http",
+      "url": "https://task-mcp.parallel.ai/mcp"
+    }
+  }
+}

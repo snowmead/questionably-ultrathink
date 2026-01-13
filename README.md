@@ -19,6 +19,16 @@ UltraThink enhances Claude's reasoning with two research-backed frameworks:
 /plugin install questionably-ultrathink@snowmead-marketplace
 ```
 
+## Development Setup
+
+For contributors working on this plugin:
+
+```bash
+./setup.sh
+```
+
+This installs dependencies (lefthook, comrak) if missing and sets up git hooks for automatic markdown formatting on commit.
+
 ## Commands
 
 ### `/questionably-ultrathink`

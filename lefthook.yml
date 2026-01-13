@@ -1,0 +1,13 @@
+# Lefthook git hooks configuration
+# https://github.com/evilmartians/lefthook
+
+pre-commit:
+  parallel: true
+  commands:
+    format-markdown:
+      glob: "**/*.md"
+      run: |
+        for file in {staged_files}; do
+          comrak --to commonmark "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+        done
+      stage_fixed: true
