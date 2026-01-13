@@ -6,8 +6,17 @@ pre-commit:
   commands:
     format-markdown:
       glob: "**/*.md"
+      exclude:
+        - "commands/*.md"
+        - "skills/**/*.md"
+        - "agents/*.md"
       run: |
         for file in {staged_files}; do
           comrak --to commonmark "$file" > "$file.tmp" && mv "$file.tmp" "$file"
         done
       stage_fixed: true
+
+    validate-plugin:
+      glob: "**/*.{md,json}"
+      run: claude plugin validate .
+      fail_text: "Plugin validation failed. Fix the issues before committing."

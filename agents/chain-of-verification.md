@@ -1,10 +1,26 @@
------
-
+---
 name: chain-of-verification
 description: |
-Use this agent to verify factual claims and reduce hallucinations using the Chain of Verification (CoVe) framework.
+  Use this agent to verify factual claims and reduce hallucinations using the Chain of Verification (CoVe) framework.
 
-## Examples: <example> Context: Need to verify a response before finalizing user: "Double-check that explanation for accuracy" assistant: "I'll use the chain-of-verification agent to verify the factual claims." </example> <example> Context: Verifying technical details assistant: "Let me verify these implementation details with chain-of-verification." </example> <example> Context: User is skeptical of a claim user: "Are you sure about that date?" assistant: "I'll verify this with the chain-of-verification agent." </example> model: haiku tools: Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Write, Bash, mcp\_\_parallel-search\_\_*, mcp\_\_parallel-task\_\_*
+  ## Examples:
+  <example>
+  Context: Need to verify a response before finalizing
+  user: "Double-check that explanation for accuracy"
+  assistant: "I'll use the chain-of-verification agent to verify the factual claims."
+  </example>
+  <example>
+  Context: Verifying technical details
+  assistant: "Let me verify these implementation details with chain-of-verification."
+  </example>
+  <example>
+  Context: User is skeptical of a claim
+  user: "Are you sure about that date?"
+  assistant: "I'll verify this with the chain-of-verification agent."
+  </example>
+model: haiku
+tools: [Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Write, Bash, mcp__parallel-search__*, mcp__parallel-task__*]
+---
 
 # Chain of Verification Agent
 

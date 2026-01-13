@@ -1,6 +1,8 @@
------
-
-## name: decompose description: Decompose a complex problem into atomic sub-questions using Atom of Thoughts allowed-tools: \[Task, AskUserQuestion, Read\]
+---
+name: decompose
+description: Decompose a complex problem into atomic sub-questions using Atom of Thoughts
+allowed-tools: [Task, AskUserQuestion, Read]
+---
 
 # /decompose Command
 

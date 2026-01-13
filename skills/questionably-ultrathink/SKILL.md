@@ -1,38 +1,18 @@
------
-
+---
 name: questionably-ultrathink
 description: |
-Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
+  Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
 
-Activation triggers:
+  Activation triggers:
 
-- "be thorough", "analyze carefully", "make sure this is right"
-
-- Complex multi-part questions
-
-- Architecture or security decisions
-
-- "verify", "double-check", "are you sure"
-
-- High-stakes technical decisions
-
-- Debugging complex issues
-  hooks:
-
-- matcher: "Stop"
-  type: "prompt"
-  prompt: |
-  Before finalizing, check these criteria:
-  
-  1. Does the response contain specific factual claims (dates, numbers, technical details) that were not verified?
-  2. Was the problem complex (3+ parts) but handled without decomposition?
-  3. Is this a high-stakes domain (security, architecture, production) where errors would be costly?
-  
-  If ANY criterion is true, recommend verification before completing.
-  Return JSON: {"decision": "allow", "reason": "..."} or {"decision": "block", "reason": "Recommend running chain-of-verification on \[specific claims\]"}
-  allowed-tools: \[Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Bash\]
-
------
+  - "be thorough", "analyze carefully", "make sure this is right"
+  - Complex multi-part questions
+  - Architecture or security decisions
+  - "verify", "double-check", "are you sure"
+  - High-stakes technical decisions
+  - Debugging complex issues
+allowed-tools: [Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Bash]
+---
 
 # UltraThink Reasoning Framework
 

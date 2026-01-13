@@ -1,10 +1,27 @@
------
-
+---
 name: atom-of-thoughts
 description: |
-Use this agent to decompose complex problems into atomic sub-questions using the Atom of Thoughts (AoT) framework.
+  Use this agent to decompose complex problems into atomic sub-questions using the Atom of Thoughts (AoT) framework.
 
-## Examples: <example> Context: User asks a multi-part question requiring synthesis user: "How does React's reconciliation work and how does it compare to Vue?" assistant: "I'll use the atom-of-thoughts agent to decompose this into atomic questions." </example> <example> Context: Planning a complex implementation user: "Help me build an authentication system with OAuth and rate limiting" assistant: "Let me decompose this into independent atoms using the atom-of-thoughts agent." </example> <example> Context: Debugging a complex issue user: "My app is slow and sometimes crashes on large datasets" assistant: "I'll decompose this into atomic diagnostic questions." </example> model: haiku tools: Read, Grep, Glob, WebSearch, AskUserQuestion, Write, Bash
+  ## Examples:
+  <example>
+  Context: User asks a multi-part question requiring synthesis
+  user: "How does React's reconciliation work and how does it compare to Vue?"
+  assistant: "I'll use the atom-of-thoughts agent to decompose this into atomic questions."
+  </example>
+  <example>
+  Context: Planning a complex implementation
+  user: "Help me build an authentication system with OAuth and rate limiting"
+  assistant: "Let me decompose this into independent atoms using the atom-of-thoughts agent."
+  </example>
+  <example>
+  Context: Debugging a complex issue
+  user: "My app is slow and sometimes crashes on large datasets"
+  assistant: "I'll decompose this into atomic diagnostic questions."
+  </example>
+model: haiku
+tools: [Read, Grep, Glob, WebSearch, AskUserQuestion, Write, Bash]
+---
 
 # Atom of Thoughts Decomposition Agent
 

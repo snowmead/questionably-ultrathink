@@ -1,6 +1,8 @@
------
-
-## name: questionably-ultrathink description: Apply full UltraThink reasoning pipeline (AoT + CoVe) to analyze the current problem with maximum rigor allowed-tools: \[Skill, Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion\]
+---
+name: questionably-ultrathink
+description: Apply full UltraThink reasoning pipeline (AoT + CoVe) to analyze the current problem with maximum rigor
+allowed-tools: [Skill, Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion]
+---
 
 # /questionably-ultrathink Command
 

@@ -1,11 +1,17 @@
------
-
+---
 name: aot-recompute
 description: |
-Use this agent to recompute atoms after Chain of Verification finds corrections.
-This agent reads corrections from disk and updates dependent atoms with corrected premises.
+  Use this agent to recompute atoms after Chain of Verification finds corrections.
+  This agent reads corrections from disk and updates dependent atoms with corrected premises.
 
-## Examples: <example> Context: CoV found an error in atom A1, need to recompute A3 which depends on A1 assistant: "I'll use the aot-recompute agent to update the dependent atoms with the correction." </example> model: haiku tools: Read, Write, Bash
+  ## Examples:
+  <example>
+  Context: CoV found an error in atom A1, need to recompute A3 which depends on A1
+  assistant: "I'll use the aot-recompute agent to update the dependent atoms with the correction."
+  </example>
+model: haiku
+tools: [Read, Write, Bash]
+---
 
 # Atom of Thoughts Recomputation Agent
 
