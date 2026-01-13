@@ -75,7 +75,7 @@ After clarifying intent, use `AskUserQuestion` to determine the analysis depth:
 ### atom-of-thoughts
 
 **Purpose:** Decompose complex problems into atomic sub-questions
-**Invoke:** `Task` tool with `subagent_type: "atom-of-thoughts"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:atom-of-thoughts"`
 
 Use when:
 
@@ -87,7 +87,7 @@ Use when:
 ### chain-of-verification
 
 **Purpose:** Verify factual claims to reduce hallucinations
-**Invoke:** `Task` tool with `subagent_type: "chain-of-verification"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:chain-of-verification"`
 
 Use when:
 
@@ -99,7 +99,7 @@ Use when:
 ### aot-recompute
 
 **Purpose:** Recompute atoms after CoV finds corrections
-**Invoke:** `Task` tool with `subagent_type: "aot-recompute"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:aot-recompute"`
 
 Use when:
 
@@ -134,7 +134,7 @@ Example: `a1b2c3d4`
 **Step 2: Decompose with AoT**
 
     Invoke Task tool:
-    - subagent_type: "atom-of-thoughts"
+    - subagent_type: "questionably-ultrathink:atom-of-thoughts"
     - prompt: "Session ID: {session-id}. Rigor: {rigor-level}. Decompose this query into atomic sub-questions: {clarified query}"
 
 **IMPORTANT:**
@@ -173,7 +173,7 @@ Process each level in order:
 
 For each atom requiring CoV, invoke the chain-of-verification agent:
 
-    Task: subagent_type: "chain-of-verification"
+    Task: subagent_type: "questionably-ultrathink:chain-of-verification"
           prompt: "Session ID: {session-id}. Verify atom {atom-id}. Read the reasoning from .questionably-ultrathink/{session-id}/atoms/{atom-id}.md and verify both the factual claims AND the reasoning chain."
 
 **Parallel execution:** Invoke ALL atoms at the same level in a SINGLE message with multiple Task calls. Wait for all results before proceeding to the next level.
@@ -195,7 +195,7 @@ When CoV finds errors, it writes correction files to `.questionably-ultrathink/{
 
 3. **Invoke aot-recompute:**
    
-       Task: subagent_type: "aot-recompute"
+       Task: subagent_type: "questionably-ultrathink:aot-recompute"
              prompt: "Session ID: {session-id}. Corrected atoms: [A1]. Atoms to recompute: [A3, FINAL]."
 
 4. **Re-verify recomputed atoms:**
@@ -225,7 +225,7 @@ Display under "Phase 3: Synthesis".
 **Step 5: Final Verification (MANDATORY)**
 
     Invoke Task tool:
-    - subagent_type: "chain-of-verification"
+    - subagent_type: "questionably-ultrathink:chain-of-verification"
     - prompt: "Verify this synthesized response: {synthesis}"
 
 **DO NOT SKIP THIS STEP.** The final response must be verified.
@@ -268,12 +268,12 @@ After Phase 4 (Final Verification), check if iteration is needed based on the us
 
 **Iteration invocation (new decomposition):**
 
-    Task: subagent_type: "atom-of-thoughts"
+    Task: subagent_type: "questionably-ultrathink:atom-of-thoughts"
           prompt: "Session ID: {session-id}. Rigor: {rigor}. Re-analyze these problematic areas with fresh perspective: {list of issues}"
 
 **Iteration invocation (correction-based update):**
 
-    Task: subagent_type: "aot-recompute"
+    Task: subagent_type: "questionably-ultrathink:aot-recompute"
           prompt: "Session ID: {session-id}. Corrected atoms: [...]. Atoms to recompute: [...]."
 
 Then continue with Steps 3-5 for the new/revised atoms.

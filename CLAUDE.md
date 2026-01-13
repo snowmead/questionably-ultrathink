@@ -38,9 +38,9 @@ questionably-ultrathink/
 
 **Note:** The skill is named `questionably-ultrathink-skill` (not `questionably-ultrathink`) to avoid naming collision with the command. When the Skill tool looks up by name, having different names ensures the correct component is loaded.
 3. **Agents** are subagents invoked via the `Task` tool with `subagent_type`:
-   - `atom-of-thoughts` - Initial problem decomposition
-   - `chain-of-verification` - Verifies atoms and writes corrections
-   - `aot-recompute` - Updates dependent atoms after corrections found
+   - `questionably-ultrathink:atom-of-thoughts` - Initial problem decomposition
+   - `questionably-ultrathink:chain-of-verification` - Verifies atoms and writes corrections
+   - `questionably-ultrathink:aot-recompute` - Updates dependent atoms after corrections found
 
 ## Plugin File Formats
 

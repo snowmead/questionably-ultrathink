@@ -16,7 +16,7 @@ Decompose the specified problem into atomic sub-questions.
 2. **Invoke the atom-of-thoughts agent:**
    
        Task tool:
-       - subagent_type: "atom-of-thoughts"
+       - subagent_type: "questionably-ultrathink:atom-of-thoughts"
        - prompt: "Decompose this problem: {problem statement}"
 
 3. **Present results** showing:

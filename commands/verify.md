@@ -19,7 +19,7 @@ Verify factual claims using Chain of Verification.
 2. **Invoke the chain-of-verification agent:**
    ```
    Task tool:
-   - subagent_type: "chain-of-verification"
+   - subagent_type: "questionably-ultrathink:chain-of-verification"
    - prompt: "Verify these claims: {content to verify}"
    ```
 
