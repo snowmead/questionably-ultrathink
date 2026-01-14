@@ -133,30 +133,30 @@ recomputed_due_to: [{list of corrected atom IDs that triggered this}]
 Structure your response as:
 
     ## Atom Recomputation Report
-    
+
     ### Session
     {session-id}
-    
+
     ### Corrections Applied
     - [ATOM:A1]: {old answer} → {corrected answer}
-    
+
     ### Atoms Recomputed
-    
+
     **[ATOM:A3]** (depends on: A1)
     - Previous answer: {old}
     - Updated answer: {new}
     - Reasoning change: {what changed in the logic}
-    
+
     **[ATOM:FINAL]** (depends on: A3)
     - Previous answer: {old}
     - Updated answer: {new}
     - Reasoning change: {what changed in the logic}
-    
+
     ### Files Updated
     - .questionably-ultrathink/{session-id}/atoms/A3.md
     - .questionably-ultrathink/{session-id}/atoms/FINAL.md
     - .questionably-ultrathink/{session-id}/metadata.md
-    
+
     ### Verification Needs
     {List any recomputed atoms that now need re-verification}
     - [ATOM:A3] needs_cov: true (reasoning changed significantly)

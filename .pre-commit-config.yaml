@@ -1,0 +1,42 @@
+# Guardrails for Claude Code Plugin Development
+# Uses prek (https://prek.j178.dev/) - a faster, Rust-based pre-commit replacement
+
+repos:
+  # Built-in hooks - fast, no external dependencies
+  - repo: builtin
+    hooks:
+      - id: trailing-whitespace
+        name: Remove trailing whitespace
+      - id: end-of-file-fixer
+        name: Fix end-of-file newlines
+      - id: check-yaml
+        name: Validate YAML files
+      - id: check-json
+        name: Validate JSON files
+      - id: check-merge-conflict
+        name: Check for merge conflict markers
+      - id: detect-private-key
+        name: Detect private keys
+      - id: no-commit-to-branch
+        name: Protect main branches
+        args: [--branch, main, --branch, master]
+      - id: check-added-large-files
+        name: Prevent large files
+        args: [--maxkb=1024]
+
+  # Plugin-specific validation hooks
+  - repo: local
+    hooks:
+      - id: validate-plugin-structure
+        name: Validate Claude Plugin Structure
+        entry: scripts/validate-plugin.sh
+        language: script
+        pass_filenames: false
+        always_run: true
+
+      - id: check-frontmatter
+        name: Validate Markdown Frontmatter
+        entry: python3 scripts/check-frontmatter.py
+        language: system
+        files: ^(commands|skills|agents)/.*\.md$
+        types: [markdown]

@@ -185,7 +185,7 @@ When CoV finds errors, it writes correction files to `.questionably-ultrathink/{
 **After each verification wave:**
 
 1. **Check for corrections:**
-   
+
        Read: .questionably-ultrathink/{session-id}/corrections/
 
    If no correction files exist, proceed to next level.
@@ -194,7 +194,7 @@ When CoV finds errors, it writes correction files to `.questionably-ultrathink/{
    Read the metadata.md to find all downstream atoms (atoms that depend on corrected atoms, directly or transitively).
 
 3. **Invoke aot-recompute:**
-   
+
        Task: subagent_type: "questionably-ultrathink:aot-recompute"
              prompt: "Session ID: {session-id}. Corrected atoms: [A1]. Atoms to recompute: [A3, FINAL]."
 
@@ -286,66 +286,66 @@ Then continue with Steps 3-5 for the new/revised atoms.
 **You MUST use this exact structure for your final output:**
 
     ## UltraThink Analysis
-    
+
     ### Original Query
     {The user's question}
-    
+
     ### Analysis Settings
     - **Rigor Level**: {Standard | Thorough | High-Stakes}
     - **Max Iterations**: {1 | 2 | 3}
-    
+
     ### Phase 1: Decomposition (AoT)
-    
+
     {Summary from atom-of-thoughts agent}
-    
+
     Atoms identified:
     - [A1] {question} → {answer}
     - [A2] {question} → {answer}
     - ...
-    
+
     ### Phase 2: Verification (CoVe)
-    
+
     **Verification Wave 1** (independent atoms - parallel):
     - [A1] ✓ VERIFIED
     - [A2] ⚠️ CORRECTED: {original} → {corrected}
-    
+
     **Verification Wave 2** (dependent atoms - uses Wave 1 corrections):
     - [A3] ✓ VERIFIED (context updated with A2 correction)
     - ...
-    
+
     ### Phase 3: Synthesis
-    
+
     {Combined response using verified/corrected atoms}
-    
+
     ### Phase 4: Final Verification
-    
+
     {CoVe summary of synthesized response}
     - Claims checked: N
     - All verified: YES/NO
     - Corrections applied: {if any}
-    
+
     ### Final Response
-    
+
     {The verified, high-confidence answer}
-    
+
     ### Confidence Assessment
-    
+
     | Aspect | Rating | Notes |
     |--------|--------|-------|
     | Decomposition Quality | HIGH/MED/LOW | {notes} |
     | Factual Accuracy | HIGH/MED/LOW | {notes} |
     | Synthesis Coherence | HIGH/MED/LOW | {notes} |
     | Overall Confidence | HIGH/MED/LOW | {summary} |
-    
+
     ### Iteration History (if applicable)
-    
+
     | Iteration | Focus | Improvements | Confidence |
     |-----------|-------|--------------|------------|
     | 1 | Full analysis | N/A | {initial}% |
     | 2 | {problematic atoms} | {N corrections} | {improved}% |
-    
+
     {Omit this section if no iterations occurred}
-    
+
     ### Uncertainty Flags
     {Any remaining areas of uncertainty the user should be aware of}
 
