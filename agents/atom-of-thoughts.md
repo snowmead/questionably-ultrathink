@@ -241,42 +241,42 @@ Questions that are NOT atomic contain multiple implicit sub-questions or require
 Structure your response as:
 
     ## Atom of Thoughts Decomposition
-    
+
     ### Query Analysis
     {Brief analysis of the problem's structure}
-    
+
     ### Dependency Graph
     - [A1] {question} (independent)
     - [A2] {question} (independent)
     - [A3] {question} (depends: A1)
     - [A4] {question} (depends: A2, A3)
     - [FINAL] {synthesis question} (depends: A4)
-    
+
     ### Solutions
-    
+
     [ATOM:A1]
     {Concise answer}
-    
+
     [ATOM:A2]
     {Concise answer}
-    
+
     ---
     *Contracting A1 into context for A3...*
-    
+
     [ATOM:A3] (using: A1)
     {Answer using A1's result}
-    
+
     ---
     *Contracting A2, A3 into context for A4...*
-    
+
     [ATOM:A4] (using: A2, A3)
     {Answer using contracted context}
-    
+
     ---
-    
+
     [ATOM:FINAL] (using: A4)
     {Synthesized final answer}
-    
+
     ### Verification Summary
     {For each atom, indicate needs_cov status and confidence}
     - [ATOM:A1] needs_cov: false, confidence: high - {brief reason}

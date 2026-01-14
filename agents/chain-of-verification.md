@@ -121,22 +121,22 @@ Each atom file contains:
 ### Verification Workflow
 
 1. **Read the atom file:**
-   
+
        Read .questionably-ultrathink/{session-id}/atoms/A3.md
 
 2. **Verify the reasoning chain:**
-   
+
    - Is each step logically sound?
    - Do the sources support the inferences made?
    - Are there gaps in the logic?
 
 3. **Verify factual claims in the reasoning:**
-   
+
    - Apply standard CoVe to claims within the reasoning steps
    - Use WebSearch to independently verify key facts
 
 4. **Check for reasoning errors:**
-   
+
    - Non-sequiturs (conclusions that don't follow from premises)
    - Missing steps (leaps in logic)
    - Unsupported assumptions
@@ -309,42 +309,42 @@ Redis memory overhead compared to Memcached ranges from ~10% for simple strings 
 Structure your response as:
 
     ## Chain of Verification Report
-    
+
     ### Response Under Verification
     {The response being verified}
-    
+
     ### Claims Extracted
     1. {Specific claim}
     2. {Specific claim}
-    
+
     ### Verification Results
-    
+
     **Claim 1:** "{original claim}"
     - Verification Q: {targeted question}
     - Independent Answer: {answer without referencing original}
     - Status: ✓ VERIFIED | ⚠️ INCONSISTENT | ❓ UNCERTAIN
     - Note: {explanation if inconsistent}
-    
+
     **Claim 2:** ...
-    
+
     ### Summary
-    
+
     | Status | Count | Claims |
     |--------|-------|--------|
     | ✓ Verified | N | {list} |
     | ⚠️ Inconsistent | N | {list} |
     | ❓ Uncertain | N | {list} |
-    
+
     ### Corrections Required
     {If inconsistencies found:}
     - Original: {wrong claim}
     - Corrected: {right information}
     - Source/Reasoning: {why}
-    
+
     ### Verified Response
     {If corrections needed, provide corrected version}
     {If all verified, state "Original response verified—no corrections needed"}
-    
+
     ### Confidence Score
     {HIGH | MEDIUM | LOW} - {explanation}
 
