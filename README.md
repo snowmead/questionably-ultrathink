@@ -12,11 +12,27 @@ UltraThink enhances Claude's reasoning with two research-backed frameworks:
 ## Installation
 
 ```bash
-# Add the marketplace
-/plugin marketplace add snowmead/questionably-ultrathink
+bunx questionably-ultrathink install
+```
 
-# Install the plugin
-/plugin install questionably-ultrathink@snowmead-marketplace
+> **Alternative:** Claude Code users can also install via marketplace:
+> ```bash
+> /plugin marketplace add snowmead/questionably-ultrathink
+> /plugin install questionably-ultrathink@snowmead-marketplace
+> ```
+
+## Usage
+
+### Claude Code
+
+```
+/questionably-ultrathink analyze whether this authentication approach is secure
+```
+
+### OpenCode
+
+```
+@questionably-ultrathink analyze whether this authentication approach is secure
 ```
 
 ## Development Setup
@@ -31,7 +47,7 @@ This installs dependencies (lefthook, comrak) if missing and sets up git hooks f
 
 ## Commands
 
-### `/questionably-ultrathink`
+### `/questionably-ultrathink` (Claude Code) / `@questionably-ultrathink` (OpenCode)
 
 Run the full reasoning pipeline on a problem:
 
@@ -42,10 +58,6 @@ Run the full reasoning pipeline on a problem:
 5. Propagates corrections and recomputes dependent atoms
 6. Synthesizes and verifies final response
 7. Iterates if confidence is below threshold (thorough/high-stakes only)
-
-```
-/questionably-ultrathink analyze whether this authentication approach is secure
-```
 
 ### `/decompose`
 
