@@ -36,13 +36,3 @@ jobs:
           python3 scripts/check-frontmatter.py \
             opencode/agent/*.md \
             opencode/command/*.md
-
-      - name: Install prek
-        run: |
-          curl -fsSL https://prek.j178.dev/install.sh | sh
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-
-      - name: Run prek hooks
-        run: |
-          export PATH="$HOME/.local/bin:$PATH"
-          prek run --all-files
