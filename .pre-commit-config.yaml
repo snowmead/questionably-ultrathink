@@ -38,5 +38,5 @@ repos:
         name: Validate Markdown Frontmatter
         entry: python3 scripts/check-frontmatter.py
         language: system
-        files: ^(commands|skills|agents)/.*\.md$
+        files: ^(claude-code/(commands|skills|agents)/.*\.md|opencode/(agent|command)/.*\.md)$
         types: [markdown]

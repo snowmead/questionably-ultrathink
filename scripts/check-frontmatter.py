@@ -62,19 +62,29 @@ def validate_command_frontmatter(
     return errors
 
 
+def is_opencode_path(file_path: Path) -> bool:
+    """Check if the file path is in the OpenCode directory structure."""
+    return "opencode" in file_path.parts
+
+
 def validate_agent_frontmatter(
     frontmatter: dict[str, Any], file_path: Path
 ) -> list[str]:
-    """Validate agent file frontmatter."""
+    """Validate agent file frontmatter.
+
+    Claude Code agents require: name, description
+    OpenCode agents require: description (name is optional, uses filename)
+    """
     errors = []
 
-    # Agents should have name and description
-    if "name" not in frontmatter:
-        errors.append("Missing required field 'name'")
-    elif (
-        not isinstance(frontmatter["name"], str) or not frontmatter["name"].strip()
-    ):
-        errors.append("Field 'name' must be a non-empty string")
+    # OpenCode agents don't require name - they use the filename
+    if not is_opencode_path(file_path):
+        if "name" not in frontmatter:
+            errors.append("Missing required field 'name'")
+        elif (
+            not isinstance(frontmatter["name"], str) or not frontmatter["name"].strip()
+        ):
+            errors.append("Field 'name' must be a non-empty string")
 
     if "description" not in frontmatter:
         errors.append("Missing required field 'description'")
@@ -88,14 +98,19 @@ def validate_agent_frontmatter(
 
 
 def get_file_type(file_path: Path) -> str | None:
-    """Determine the type of file based on its directory."""
+    """Determine the type of file based on its directory.
+
+    Handles both Claude Code and OpenCode directory structures:
+    - Claude Code: commands/, skills/, agents/
+    - OpenCode: command/, agent/
+    """
     parts = file_path.parts
     for i, part in enumerate(parts):
         if part == "skills":
             return "skill"
-        elif part == "commands":
+        elif part in ("commands", "command"):
             return "command"
-        elif part == "agents":
+        elif part in ("agents", "agent"):
             return "agent"
     return None
 

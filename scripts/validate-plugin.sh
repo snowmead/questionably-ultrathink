@@ -106,7 +106,31 @@ validate_directory_structure() {
 
     local has_content=false
 
-    # Check for required content directories
+    # Check Claude Code directories (claude-code/commands/, claude-code/skills/, claude-code/agents/)
+    for dir in "claude-code/commands" "claude-code/skills" "claude-code/agents"; do
+        if [[ -d "$dir" ]]; then
+            local md_count
+            md_count=$(find "$dir" -name "*.md" | wc -l)
+            if [[ $md_count -gt 0 ]]; then
+                has_content=true
+                echo "  Found $md_count .md file(s) in $dir/"
+            fi
+        fi
+    done
+
+    # Check OpenCode directories (opencode/command/, opencode/agent/)
+    for dir in "opencode/command" "opencode/agent"; do
+        if [[ -d "$dir" ]]; then
+            local md_count
+            md_count=$(find "$dir" -name "*.md" | wc -l)
+            if [[ $md_count -gt 0 ]]; then
+                has_content=true
+                echo "  Found $md_count .md file(s) in $dir/"
+            fi
+        fi
+    done
+
+    # Fallback: check legacy root directories (commands/, skills/, agents/)
     for dir in "commands" "skills" "agents"; do
         if [[ -d "$dir" ]]; then
             local md_count
@@ -119,7 +143,7 @@ validate_directory_structure() {
     done
 
     if [[ "$has_content" == "false" ]]; then
-        error "Plugin must have at least one of: commands/, skills/, or agents/ with .md files"
+        error "Plugin must have at least one of: commands/, skills/, agents/, claude-code/*/, or opencode/*/ with .md files"
         exit 1
     fi
 

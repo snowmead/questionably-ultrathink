@@ -1,0 +1,38 @@
+name: Validate Plugin
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install pyyaml
+
+      - name: Validate plugin structure
+        run: ./scripts/validate-plugin.sh
+
+      - name: Validate Claude Code frontmatter
+        run: |
+          python3 scripts/check-frontmatter.py \
+            claude-code/agents/*.md \
+            claude-code/commands/*.md \
+            claude-code/skills/**/SKILL.md
+
+      - name: Validate OpenCode frontmatter
+        run: |
+          python3 scripts/check-frontmatter.py \
+            opencode/agent/*.md \
+            opencode/command/*.md
