@@ -14,21 +14,43 @@ This is a Claude Code plugin that integrates two research-backed reasoning frame
 questionably-ultrathink/
 ├── .claude-plugin/
 │   ├── plugin.json          # Plugin metadata (name, version, author)
-│   └── marketplace.json     # Marketplace registration
+│   └── marketplace.json     # Marketplace registration (source → ./claude-code)
 ├── .mcp.json                 # MCP server configuration (optional Parallel.ai)
-├── commands/                 # User-invocable slash commands
-│   ├── questionably-ultrathink.md  # /questionably-ultrathink - full pipeline
-│   ├── decompose.md         # /decompose - AoT only
-│   └── verify.md            # /verify - CoVe only
-├── skills/
-│   └── questionably-ultrathink-skill/
-│       └── SKILL.md         # Main skill orchestration with pipeline steps
-├── agents/
-│   ├── atom-of-thoughts.md  # AoT agent - initial decomposition (haiku model)
-│   ├── aot-recompute.md     # Recomputation agent - updates atoms after corrections (haiku model)
-│   └── chain-of-verification.md  # CoVe agent (haiku model)
-└── hooks/
-    └── hooks.json           # Hook configuration (currently empty)
+│
+├── claude-code/              # Claude Code plugin source
+│   ├── .claude-plugin/
+│   │   └── plugin.json       # Plugin manifest
+│   ├── agents/
+│   │   ├── atom-of-thoughts.md
+│   │   ├── chain-of-verification.md
+│   │   └── aot-recompute.md
+│   ├── commands/
+│   │   ├── questionably-ultrathink.md
+│   │   ├── decompose.md
+│   │   └── verify.md
+│   └── skills/
+│       └── questionably-ultrathink-skill/
+│           └── SKILL.md
+│
+├── opencode/                 # OpenCode source (independent)
+│   ├── agent/
+│   │   ├── questionably-ultrathink.md   # Primary orchestrator
+│   │   ├── atom-of-thoughts.md
+│   │   ├── chain-of-verification.md
+│   │   └── aot-recompute.md
+│   └── command/
+│       ├── questionably-ultrathink.md
+│       ├── decompose.md
+│       └── verify.md
+│
+├── hooks/
+│   └── hooks.json            # Hook configuration (currently empty)
+├── scripts/
+│   ├── build-dist.ts         # Build script for npm distribution
+│   └── install-plugin.ts     # Interactive installer
+└── dist/                     # Built for npm
+    ├── claude-code/
+    └── opencode/
 ```
 
 ## How Components Connect
@@ -104,3 +126,78 @@ The plugin includes optional Parallel.ai MCP servers for enhanced web search dur
 **Setup:** These servers require OAuth authentication. Run `/mcp` in Claude Code and authenticate with Parallel.ai to enable them.
 
 **Fallback:** The CoVe agent automatically falls back to native `WebSearch` and `WebFetch` tools if Parallel.ai is not authenticated. The plugin works fully without MCP authentication.
+
+## Dual Platform Support (Claude Code + OpenCode)
+
+This plugin supports both Claude Code and OpenCode with **separate source directories**:
+
+- **Claude Code source**: `claude-code/` (agents, commands, skills)
+- **OpenCode source**: `opencode/` (agent, command)
+
+The platforms have fundamental differences (Claude Code has Skills, OpenCode doesn't), so each platform has its own independent source files.
+
+### Development Guidelines
+
+1. **Edit Claude Code files** in `claude-code/agents/`, `claude-code/commands/`, `claude-code/skills/`
+2. **Edit OpenCode files** in `opencode/agent/`, `opencode/command/`
+3. **Test on both platforms** when making changes
+
+### Marketplace Compatibility
+
+The `.claude-plugin/marketplace.json` at the repo root points to `./claude-code`:
+
+```json
+{
+  "plugins": [{
+    "name": "questionably-ultrathink",
+    "source": "./claude-code"
+  }]
+}
+```
+
+This allows `/plugin marketplace add snowmead/questionably-ultrathink` to work correctly.
+
+## NPM Distribution
+
+The plugin can be installed globally via npm/bun for easy distribution.
+
+### Building for Distribution
+
+```bash
+# Build dist/ for npm publishing
+bun run build
+```
+
+This creates:
+```
+dist/
+├── claude-code/     # Claude Code format files
+│   ├── agents/
+│   ├── commands/
+│   ├── skills/
+│   └── .claude-plugin/
+└── opencode/        # OpenCode format files
+    ├── agent/
+    └── command/
+```
+
+### Installing the Plugin
+
+```bash
+# Install globally
+bun add -g questionably-ultrathink
+
+# Or install to specific platform
+questionably-ultrathink install --claude-code
+questionably-ultrathink install --opencode
+questionably-ultrathink install --both
+```
+
+**Install locations:**
+- Claude Code: `~/.claude/plugins/questionably-ultrathink/`
+- OpenCode: `~/.config/opencode/`
+
+### Usage After Installation
+
+- **Claude Code**: `/questionably-ultrathink "your question"`
+- **OpenCode**: `@questionably-ultrathink "your question"`

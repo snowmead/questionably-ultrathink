@@ -1,0 +1,24 @@
+{
+  "name": "questionably-ultrathink",
+  "version": "1.0.0",
+  "description": "Claude Code plugin integrating Atom of Thoughts (AoT) and Chain of Verification (CoVe) reasoning frameworks",
+  "type": "module",
+  "bin": {
+    "questionably-ultrathink": "./scripts/install-plugin.ts"
+  },
+  "files": [
+    "dist/",
+    "scripts/"
+  ],
+  "scripts": {
+    "install": "bun scripts/install-plugin.ts",
+    "build": "bun scripts/build-dist.ts",
+    "postinstall": "bun scripts/install-plugin.ts --auto"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.9.1"
+  },
+  "devDependencies": {
+    "yaml": "^2.7.0"
+  }
+}
