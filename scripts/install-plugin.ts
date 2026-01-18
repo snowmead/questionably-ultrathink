@@ -14,7 +14,7 @@
  *   --uninstall     Uninstall the plugin (removes files and config)
  *
  * This script copies plugin files to the appropriate config directories:
- *   Claude Code: ~/.claude/plugins/questionably-ultrathink/
+ *   Claude Code: ~/.claude/plugins/marketplaces/questionably-ultrathink/
  *   OpenCode: ~/.config/opencode/
  */
 
@@ -62,10 +62,16 @@ const DEV_OPENCODE = join(ROOT_DIR, "opencode");
 const DIST_CLAUDE_CODE = join(DIST_DIR, "claude-code");
 const DIST_OPENCODE = join(DIST_DIR, "opencode");
 
-// Target paths
-const CLAUDE_CODE_PLUGINS_DIR = join(
+// Target paths - proper marketplace structure
+const CLAUDE_CODE_MARKETPLACE_DIR = join(
   homedir(),
   ".claude",
+  "plugins",
+  "marketplaces",
+  "questionably-ultrathink",
+);
+const CLAUDE_CODE_PLUGIN_DIR = join(
+  CLAUDE_CODE_MARKETPLACE_DIR,
   "plugins",
   "questionably-ultrathink",
 );
@@ -141,62 +147,73 @@ async function installClaudeCode(): Promise<boolean> {
 
   try {
     // Clean existing installation for a fresh update
-    if (existsSync(CLAUDE_CODE_PLUGINS_DIR)) {
-      await rm(CLAUDE_CODE_PLUGINS_DIR, { recursive: true });
+    if (existsSync(CLAUDE_CODE_MARKETPLACE_DIR)) {
+      await rm(CLAUDE_CODE_MARKETPLACE_DIR, { recursive: true });
     }
-    await mkdir(CLAUDE_CODE_PLUGINS_DIR, { recursive: true });
 
-    // Copy agents
+    // Create marketplace structure:
+    // ~/.claude/plugins/marketplaces/questionably-ultrathink/
+    // ├── .claude-plugin/
+    // │   └── marketplace.json
+    // └── plugins/
+    //     └── questionably-ultrathink/
+    //         ├── .claude-plugin/
+    //         │   └── plugin.json
+    //         ├── agents/
+    //         ├── commands/
+    //         └── skills/
+    await mkdir(CLAUDE_CODE_MARKETPLACE_DIR, { recursive: true });
+    await mkdir(CLAUDE_CODE_PLUGIN_DIR, { recursive: true });
+
+    // Copy plugin files to plugins/questionably-ultrathink/
     const agentsDir = join(sourceDir, "agents");
     if (existsSync(agentsDir)) {
-      await copyDir(agentsDir, join(CLAUDE_CODE_PLUGINS_DIR, "agents"));
+      await copyDir(agentsDir, join(CLAUDE_CODE_PLUGIN_DIR, "agents"));
     }
 
-    // Copy commands
     const commandsDir = join(sourceDir, "commands");
     if (existsSync(commandsDir)) {
-      await copyDir(commandsDir, join(CLAUDE_CODE_PLUGINS_DIR, "commands"));
+      await copyDir(commandsDir, join(CLAUDE_CODE_PLUGIN_DIR, "commands"));
     }
 
-    // Copy skills
     const skillsDir = join(sourceDir, "skills");
     if (existsSync(skillsDir)) {
-      await copyDir(skillsDir, join(CLAUDE_CODE_PLUGINS_DIR, "skills"));
+      await copyDir(skillsDir, join(CLAUDE_CODE_PLUGIN_DIR, "skills"));
     }
 
-    // Copy plugin metadata
+    // Copy plugin.json to plugin's .claude-plugin/
     const pluginDir = join(sourceDir, ".claude-plugin");
     if (existsSync(pluginDir)) {
-      await copyDir(pluginDir, join(CLAUDE_CODE_PLUGINS_DIR, ".claude-plugin"));
+      await copyDir(pluginDir, join(CLAUDE_CODE_PLUGIN_DIR, ".claude-plugin"));
     }
 
-    // Create marketplace.json for Claude Code to recognize this as a valid marketplace
+    // Create marketplace.json at marketplace root's .claude-plugin/
     const version = await getPluginVersion();
     const marketplaceJson = {
+      $schema: "https://anthropic.com/claude-code/marketplace.schema.json",
       name: "questionably-ultrathink",
+      description: "UltraThink reasoning framework plugin",
       owner: { name: "snowmead" },
-      metadata: {
-        description: "UltraThink reasoning framework plugin",
-        version: version,
-      },
       plugins: [
         {
           name: "questionably-ultrathink",
           description:
             "Advanced reasoning plugin integrating Chain of Verification (CoVe) and Atom of Thoughts (AoT) frameworks",
-          source: ".",
+          source: "./plugins/questionably-ultrathink",
         },
       ],
     };
+    await mkdir(join(CLAUDE_CODE_MARKETPLACE_DIR, ".claude-plugin"), { recursive: true });
     await writeFile(
-      join(CLAUDE_CODE_PLUGINS_DIR, ".claude-plugin", "marketplace.json"),
+      join(CLAUDE_CODE_MARKETPLACE_DIR, ".claude-plugin", "marketplace.json"),
       JSON.stringify(marketplaceJson, null, 2) + "\n",
       "utf-8",
     );
 
     // Register with Claude Code's config files
     await registerPlugin({
-      pluginPath: CLAUDE_CODE_PLUGINS_DIR,
+      marketplacePath: CLAUDE_CODE_MARKETPLACE_DIR,
+      pluginPath: CLAUDE_CODE_PLUGIN_DIR,
       version: version,
     });
 
@@ -208,9 +225,15 @@ async function installClaudeCode(): Promise<boolean> {
 
 async function uninstallClaudeCode(): Promise<boolean> {
   try {
-    // Remove plugin files
-    if (existsSync(CLAUDE_CODE_PLUGINS_DIR)) {
-      await rm(CLAUDE_CODE_PLUGINS_DIR, { recursive: true });
+    // Remove marketplace directory (contains plugin)
+    if (existsSync(CLAUDE_CODE_MARKETPLACE_DIR)) {
+      await rm(CLAUDE_CODE_MARKETPLACE_DIR, { recursive: true });
+    }
+
+    // Also remove old installation location if it exists (for migration)
+    const oldLocation = join(homedir(), ".claude", "plugins", "questionably-ultrathink");
+    if (existsSync(oldLocation)) {
+      await rm(oldLocation, { recursive: true });
     }
 
     // Unregister from Claude Code's config files
@@ -395,7 +418,7 @@ async function runNonInteractive(
     console.log("\n📦 Installing to Claude Code...");
     const result = await installClaudeCode();
     if (result) {
-      console.log(`  ✅ Installed to: ${CLAUDE_CODE_PLUGINS_DIR}`);
+      console.log(`  ✅ Installed to: ${CLAUDE_CODE_MARKETPLACE_DIR}`);
     } else {
       console.log("  ❌ Failed to install");
       success = false;
@@ -519,7 +542,7 @@ async function runUninstall(
     console.log("Uninstalling from Claude Code...");
     const result = await uninstallClaudeCode();
     if (result) {
-      console.log(`  Removed from: ${CLAUDE_CODE_PLUGINS_DIR}`);
+      console.log(`  Removed from: ${CLAUDE_CODE_MARKETPLACE_DIR}`);
       console.log(`  Unregistered plugin: ${getPluginId()}`);
     } else {
       console.log("  Failed to uninstall (may not have been installed)");

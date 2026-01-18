@@ -140,30 +140,43 @@ const MARKETPLACE_ID = "questionably-ultrathink";
 const PLUGIN_ID = `${PLUGIN_NAME}@${MARKETPLACE_ID}`;
 
 export interface RegisterOptions {
+  marketplacePath: string;
   pluginPath: string;
   version: string;
 }
 
 /**
  * Register the plugin with Claude Code's configuration files.
+ *
+ * Claude Code expects marketplaces to have this structure:
+ *   ~/.claude/plugins/marketplaces/<marketplace-name>/
+ *   ├── .claude-plugin/
+ *   │   └── marketplace.json
+ *   └── plugins/
+ *       └── <plugin-name>/
+ *           └── .claude-plugin/
+ *               └── plugin.json
+ *
+ * The marketplace source path should point to the marketplace root,
+ * and the plugin installPath should point to the plugin subdirectory.
  */
 export async function registerPlugin(options: RegisterOptions): Promise<void> {
-  const { pluginPath, version } = options;
+  const { marketplacePath, pluginPath, version } = options;
   const now = new Date().toISOString();
 
-  // 1. Add to known_marketplaces.json
+  // 1. Add to known_marketplaces.json (points to marketplace root)
   const marketplaces = await readKnownMarketplaces();
   marketplaces[MARKETPLACE_ID] = {
     source: {
       source: "directory",
-      path: pluginPath,
+      path: marketplacePath,
     },
-    installLocation: pluginPath,
+    installLocation: marketplacePath,
     lastUpdated: now,
   };
   await writeKnownMarketplaces(marketplaces);
 
-  // 2. Add to installed_plugins.json
+  // 2. Add to installed_plugins.json (points to plugin inside marketplace)
   const pluginsFile = await readInstalledPlugins();
   if (!pluginsFile.plugins) {
     pluginsFile.plugins = {};
