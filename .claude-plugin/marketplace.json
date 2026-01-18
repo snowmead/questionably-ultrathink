@@ -5,7 +5,7 @@
   },
   "metadata": {
     "description": "Plugin marketplace for UltraThink reasoning framework integrating Chain of Verification and Atom of Thoughts",
-    "version": "1.0.13"
+    "version": "1.0.14"
   },
   "plugins": [
     {
