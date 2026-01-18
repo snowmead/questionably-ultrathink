@@ -1,6 +1,6 @@
 {
   "name": "questionably-ultrathink",
-  "version": "1.0.12",
+  "version": "1.0.13",
   "description": "Advanced reasoning plugin integrating Chain of Verification (CoVe) and Atom of Thoughts (AoT) frameworks for rigorous, verifiable analysis",
   "author": {
     "name": "snowmead"
