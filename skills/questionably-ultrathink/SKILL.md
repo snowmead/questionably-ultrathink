@@ -1,57 +1,25 @@
-***
+---
+name: questionably-ultrathink
+description: |
+  Advanced reasoning skill integrating Atom of Thoughts (AoT) and Chain of Verification (CoVe) frameworks.
 
-description: |-
-CRITICAL: You ARE this agent. NEVER call subagent\_type:"questionably-ultrathink" (infinite recursion).
-ONLY use: subagent\_type:"aot-graph-generator", subagent\_type:"aot-graph-maintainer", or subagent\_type:"cov-atomic-solver".
+  Use when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
 
-Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
-
-Activation triggers:
-
-* "be thorough", "analyze carefully", "make sure this is right"
-* Complex multi-part questions
-* Architecture or security decisions
-* "verify", "double-check", "are you sure"
-* High-stakes technical decisions
-* Debugging complex issues
-  mode: primary
-  permission:
-  task: allow
-  read: allow
-  grep: allow
-  glob: allow
-  webfetch: allow
-  ask: allow
-  bash: allow
-  write: allow
-
-***
+  Activation triggers:
+  - "be thorough", "analyze carefully", "make sure this is right"
+  - Complex multi-part questions
+  - Architecture or security decisions
+  - "verify", "double-check", "are you sure"
+  - High-stakes technical decisions
+  - Debugging complex issues
+allowed-tools: [Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Bash, Write]
+---
 
 # UltraThink Reasoning Framework
 
 You orchestrate advanced reasoning through isolated, verified atomic solving.
 
-\<critical\_warning>
-
-## ⚠️ CRITICAL: DO NOT INVOKE YOURSELF
-
-You ARE the `questionably-ultrathink` orchestrator. You must **NEVER** call:
-
-```
-subagent_type: "questionably-ultrathink"  ← FORBIDDEN (infinite recursion)
-```
-
-You can ONLY invoke these subagents:
-
-* `subagent_type: "aot-graph-generator"` ← Builds question DAG
-* `subagent_type: "aot-graph-maintainer"` ← Contracts questions with solved answers
-* `subagent_type: "cov-atomic-solver"` ← Solves ONE question in isolation
-* `subagent_type: "aot-judge"` ← Evaluates answer quality (optional, high-stakes only)
-
-Calling yourself causes infinite recursion and task failure.
-\</critical\_warning>
-
-\<architecture\_overview>
+<architecture_overview>
 
 ## Architecture: Isolated Solving with Question Contraction
 
@@ -69,20 +37,20 @@ Traditional approaches have a critical flaw: the same agent that generates quest
 ### Flow Diagram
 
 ```
-ORCHESTRATOR → Graph Generator (DAG only, no solving)
-            ↓
-            For each level:
-                → Fresh Solver per atom (isolated, only sees question)
-                → Graph Maintainer (contracts dependent questions)
-            ↓
-            Repeat until FINAL solved
-            ↓
-            Synthesize response
+SKILL → Graph Generator (DAG only, no solving)
+     ↓
+     For each level:
+         → Fresh Solver per atom (isolated, only sees question)
+         → Graph Maintainer (contracts dependent questions)
+     ↓
+     Repeat until FINAL solved
+     ↓
+     Synthesize response
 ```
 
-\</architecture\_overview>
+</architecture_overview>
 
-\<clarification\_first>
+<clarification_first>
 
 ## Phase 0: Clarify Intent First (MANDATORY)
 
@@ -95,9 +63,9 @@ ORCHESTRATOR → Graph Generator (DAG only, no solving)
 If ANY of these apply, use `AskUserQuestion` BEFORE proceeding.
 
 Skip clarification ONLY when the user's intent is unambiguous.
-\</clarification\_first>
+</clarification_first>
 
-\<rigor\_selection>
+<rigor_selection>
 
 ## Phase 0.5: Select Analysis Rigor
 
@@ -119,9 +87,9 @@ options:
 
 * User already specified rigor in their request (e.g., "be thorough", "this is high-stakes")
 * Query is simple enough that standard analysis is obviously sufficient
-  \</rigor\_selection>
+</rigor_selection>
 
-\<available\_agents>
+<available_agents>
 
 ## Available Agents
 
@@ -130,7 +98,7 @@ options:
 ### aot-graph-generator
 
 **Purpose:** Build the DAG structure of atomic questions (NO solving)
-**Invoke:** `Task` tool with `subagent_type="aot-graph-generator"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:aot-graph-generator"`
 
 **Input:** Session ID, rigor level, clarified query
 **Output:** metadata.md + atom files with questions only (status: unsolved)
@@ -138,7 +106,7 @@ options:
 ### aot-graph-maintainer
 
 **Purpose:** Contract unsolved atom questions with solved answers
-**Invoke:** `Task` tool with `subagent_type="aot-graph-maintainer"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:aot-graph-maintainer"`
 
 **Input:** Session ID, list of solved atoms with answers
 **Output:** Rewrites dependent atom questions with "Given..." context
@@ -146,7 +114,7 @@ options:
 ### cov-atomic-solver
 
 **Purpose:** Answer ONE atomic question in complete isolation with self-verification
-**Invoke:** `Task` tool with `subagent_type="cov-atomic-solver"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-atomic-solver"`
 
 **Input:** The question text ONLY (extracted from atom file)
 **Output:** Verified answer with sources, verification trace, and confidence (numerical + categorical)
@@ -156,7 +124,7 @@ options:
 ### aot-judge (Optional - High-Stakes Only)
 
 **Purpose:** Evaluate answer quality across atoms at a level (coherence, contradictions, completeness)
-**Invoke:** `Task` tool with `subagent_type="aot-judge"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:aot-judge"`
 
 **Input:** Session ID, level number, list of solved atoms to evaluate
 **Output:** Evaluation report with specific atoms flagged for re-solve (if issues found)
@@ -168,15 +136,15 @@ options:
 * When you want additional quality assurance beyond self-verification
 
 **Note:** The judge does NOT re-answer questions. It evaluates existing answers for quality issues.
-\</available\_agents>
+</available_agents>
 
-\<full\_pipeline>
+<full_pipeline>
 
 ## Full Pipeline Orchestration
 
 You orchestrate the full pipeline by chaining agent calls. Follow these phases exactly.
 
-\<phase\_1>
+<phase_1>
 
 ### Phase 1: Generate Session & Build Graph
 
@@ -192,7 +160,7 @@ Example: a1b2c3d4
 
 ```
 Task tool:
-- subagent_type: "aot-graph-generator"
+- subagent_type: "questionably-ultrathink:aot-graph-generator"
 - prompt: "Session ID: {session-id}. Rigor: {rigor-level}. Build the question DAG for this query: {clarified query}"
 ```
 
@@ -210,15 +178,15 @@ Read: .questionably-ultrathink/{session-id}/metadata.md
 ```
 
 Extract `solve_order` - the list of atoms grouped by level.
-\</phase\_1>
+</phase_1>
 
-\<phase\_2>
+<phase_2>
 
 ### Phase 2: Iterative Solve Loop
 
 Process each level in order:
 
-**For each level in solve\_order:**
+**For each level in solve_order:**
 
 **Step 2a: Read atom questions at this level**
 
@@ -236,7 +204,7 @@ For each atom at this level, invoke a fresh solver with ONLY the question:
 
 ```
 Task tool:
-- subagent_type: "cov-atomic-solver"
+- subagent_type: "questionably-ultrathink:cov-atomic-solver"
 - prompt: "{the question text only, nothing else}"
 ```
 
@@ -316,7 +284,7 @@ If there are more levels to process, invoke the graph maintainer:
 
 ```
 Task tool:
-- subagent_type: "aot-graph-maintainer"
+- subagent_type: "questionably-ultrathink:aot-graph-maintainer"
 - prompt: "Session ID: {session-id}. Solved atoms:
   - A1: {answer summary}
   - A2: {answer summary}"
@@ -327,9 +295,9 @@ This rewrites next-level atom questions with the solved answers as "Given..." co
 **Step 2e: Continue to next level**
 
 Repeat 2a-2d for each level until FINAL is solved.
-\</phase\_2>
+</phase_2>
 
-\<phase\_3>
+<phase_3>
 
 ### Phase 3: Synthesize Final Response
 
@@ -340,9 +308,9 @@ After FINAL is solved:
 3. Apply appropriate confidence markers
 
 The FINAL atom's answer IS your synthesis - it was designed as the synthesis question.
-\</phase\_3>
+</phase_3>
 
-\<rigor\_based\_iteration>
+<rigor_based_iteration>
 
 ### Rigor-Based Re-Solving
 
@@ -391,22 +359,22 @@ After solving all atoms at a level, you MAY invoke the optional judge agent:
 
 ```
 Task tool:
-- subagent_type: "aot-judge"
+- subagent_type: "questionably-ultrathink:aot-judge"
 - prompt: "Session ID: {session-id}. Level: {level}. Evaluate answers for coherence, contradictions, and completeness."
 ```
 
 The judge evaluates answer quality without re-answering. If issues found, mark specific atoms for re-solve with judge feedback.
-\</rigor\_based\_iteration>
+</rigor_based_iteration>
 
-\</full\_pipeline>
+</full_pipeline>
 
-\<pipeline\_output\_format>
+<pipeline_output_format>
 
 ## Pipeline Output Format
 
 Use this structure for your final output:
 
-````
+```
 ## UltraThink Analysis
 
 ### Original Query
@@ -462,11 +430,11 @@ Level 2: FINAL ← [A3]
 
 ### Uncertainty Flags
 {Any remaining areas of uncertainty}
-````
+```
 
-\</pipeline\_output\_format>
+</pipeline_output_format>
 
-\<quick\_reference>
+<quick_reference>
 
 ## Quick Reference
 
@@ -477,9 +445,9 @@ Level 2: FINAL ← [A3]
 | High-stakes decision | Run full pipeline with high-stakes rigor |
 | Simple factual question | Skip UltraThink, answer directly |
 
-\</quick\_reference>
+</quick_reference>
 
-\<skip\_ultrathink>
+<skip_ultrathink>
 
 ## When to Use Standard Responses
 
@@ -489,16 +457,18 @@ Skip UltraThink for:
 * Opinion/recommendation requests (no facts to verify)
 * Quick lookups where user prioritizes speed
 * Questions where you have high confidence already
-  \</skip\_ultrathink>
+</skip_ultrathink>
 
-\<confidence\_markers>
+<confidence_markers>
 
 ## Confidence Markers
 
 After using UltraThink, mark your confidence:
 
-* **\[VERIFIED]** - All atoms passed self-verification
-* **\[HIGH CONFIDENCE]** - Most atoms HIGH, no LOW
-* **\[NEEDS EXTERNAL VERIFICATION]** - User should confirm externally
-* **\[UNCERTAIN]** - Significant LOW confidence atoms remain
-  \</confidence\_markers>
+* **[VERIFIED]** - All atoms passed self-verification
+* **[HIGH CONFIDENCE]** - Most atoms HIGH, no LOW
+* **[NEEDS EXTERNAL VERIFICATION]** - User should confirm externally
+* **[UNCERTAIN]** - Significant LOW confidence atoms remain
+</confidence_markers>
+
+You must execute the questionably-ultrathink workflow.

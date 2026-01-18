@@ -5,12 +5,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ```bash
-# Build dist/ for npm publishing
-bun run build
-
-# Run interactive installer (choose platform)
-bun run install
-
 # First-time setup (installs lefthook, comrak, sets up git hooks)
 ./setup.sh
 
@@ -18,7 +12,7 @@ bun run install
 ./scripts/validate-plugin.sh
 
 # Validate frontmatter syntax (run by CI)
-python3 scripts/check-frontmatter.py claude-code/**/*.md opencode/**/*.md
+python3 scripts/check-frontmatter.py claude-code/**/*.md skills/**/*.md
 ```
 
 ## Overview
@@ -26,6 +20,19 @@ python3 scripts/check-frontmatter.py claude-code/**/*.md opencode/**/*.md
 This is a Claude Code plugin that integrates two research-backed reasoning frameworks:
 - **Atom of Thoughts (AoT)** - Decomposes complex problems into atomic sub-questions organized as a DAG
 - **Chain of Verification (CoVe)** - Verifies factual claims through independent questioning to reduce hallucinations
+
+## Installation
+
+**Claude Code:**
+```bash
+/plugin marketplace add snowmead/questionably-ultrathink
+/plugin install questionably-ultrathink@snowmead-marketplace
+```
+
+**Other Agents (OpenCode, Cursor, Codex, etc.):**
+```bash
+bunx add-skill snowmead/questionably-ultrathink
+```
 
 ## Architecture
 
@@ -42,7 +49,8 @@ questionably-ultrathink/
 │   ├── agents/
 │   │   ├── aot-graph-generator.md    # Builds question DAG (no solving)
 │   │   ├── aot-graph-maintainer.md   # Contracts questions with solved answers
-│   │   └── cov-atomic-solver.md      # Solves ONE question in isolation
+│   │   ├── cov-atomic-solver.md      # Solves ONE question in isolation
+│   │   └── aot-judge.md              # Evaluates answer quality (High-Stakes)
 │   ├── commands/
 │   │   ├── questionably-ultrathink.md
 │   │   ├── decompose.md
@@ -51,25 +59,15 @@ questionably-ultrathink/
 │       └── questionably-ultrathink-skill/
 │           └── SKILL.md
 │
-├── opencode/                 # OpenCode source (independent)
-│   ├── agent/
-│   │   ├── questionably-ultrathink.md   # Primary orchestrator
-│   │   ├── aot-graph-generator.md       # Builds question DAG (no solving)
-│   │   ├── aot-graph-maintainer.md      # Contracts questions with solved answers
-│   │   └── cov-atomic-solver.md         # Solves ONE question in isolation
-│   └── command/
-│       ├── questionably-ultrathink.md
-│       ├── decompose.md
-│       └── verify.md
+├── skills/                   # Root skills/ for add-skill discovery
+│   └── questionably-ultrathink/
+│       └── SKILL.md          # Universal skill for other agents
 │
 ├── hooks/
-│   └── hooks.json            # Hook configuration (currently empty)
-├── scripts/
-│   ├── build-dist.ts         # Build script for npm distribution
-│   └── install-plugin.ts     # Interactive installer
-└── dist/                     # Built for npm
-    ├── claude-code/
-    └── opencode/
+│   └── hooks.json            # Hook configuration
+└── scripts/
+    ├── check-frontmatter.py  # CI: Validate YAML frontmatter
+    └── validate-plugin.sh    # CI: Validate plugin structure
 ```
 
 ## How Components Connect
@@ -78,10 +76,12 @@ questionably-ultrathink/
 2. **Skill** (`skills/questionably-ultrathink-skill/SKILL.md`) orchestrates the full pipeline by chaining agent calls
 
 **Note:** The skill is named `questionably-ultrathink-skill` (not `questionably-ultrathink`) to avoid naming collision with the command. When the Skill tool looks up by name, having different names ensures the correct component is loaded.
+
 3. **Agents** are subagents invoked via the `Task` tool with `subagent_type`:
    - `questionably-ultrathink:aot-graph-generator` - Builds question DAG (no solving)
    - `questionably-ultrathink:aot-graph-maintainer` - Contracts questions with solved answers
    - `questionably-ultrathink:cov-atomic-solver` - Solves ONE question in isolation
+   - `questionably-ultrathink:aot-judge` - Evaluates answer quality (High-Stakes only)
 
 ## Plugin File Formats
 
@@ -161,28 +161,12 @@ The plugin includes optional Parallel.ai MCP servers for enhanced web search dur
 ## CI/CD
 
 - **validate.yml**: Runs on push/PR to main/develop. Validates plugin structure and frontmatter syntax.
-- **publish.yml**: Publishes to npm when tags are pushed.
 
 Pre-commit hooks (via lefthook):
 - `format-markdown`: Formats non-plugin markdown files with comrak
 - `validate-plugin`: Runs `claude plugin validate .`
 
-## Dual Platform Support (Claude Code + OpenCode)
-
-This plugin supports both Claude Code and OpenCode with **separate source directories**:
-
-- **Claude Code source**: `claude-code/` (agents, commands, skills)
-- **OpenCode source**: `opencode/` (agent, command)
-
-The platforms have fundamental differences (Claude Code has Skills, OpenCode doesn't), so each platform has its own independent source files.
-
-### Development Guidelines
-
-1. **Edit Claude Code files** in `claude-code/agents/`, `claude-code/commands/`, `claude-code/skills/`
-2. **Edit OpenCode files** in `opencode/agent/`, `opencode/command/`
-3. **Test on both platforms** when making changes
-
-### Marketplace Compatibility
+## Marketplace Compatibility
 
 The `.claude-plugin/marketplace.json` at the repo root points to `./claude-code`:
 
@@ -197,17 +181,16 @@ The `.claude-plugin/marketplace.json` at the repo root points to `./claude-code`
 
 This allows `/plugin marketplace add snowmead/questionably-ultrathink` to work correctly.
 
-## NPM Distribution
+## add-skill Compatibility
 
-The plugin can be installed globally via npm/bun for easy distribution.
-
-### Building and Publishing
+The root `skills/questionably-ultrathink/` directory enables discovery by `add-skill`:
 
 ```bash
-bun run build                # Creates dist/ with both platforms
-bun publish                  # Publish to npm (requires npm login)
+bunx add-skill snowmead/questionably-ultrathink
 ```
 
-**Install locations after `bunx questionably-ultrathink install`:**
-- Claude Code: `~/.claude/plugins/questionably-ultrathink/`
-- OpenCode: `~/.config/opencode/`
+This installs the skill to agent-specific directories:
+- Claude Code → `.claude/skills/`
+- OpenCode → `.opencode/skill/`
+- Cursor → `.cursor/skills/`
+- Codex → `.codex/skills/`

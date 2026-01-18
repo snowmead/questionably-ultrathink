@@ -31,8 +31,7 @@ jobs:
             claude-code/commands/*.md \
             claude-code/skills/**/SKILL.md
 
-      - name: Validate OpenCode frontmatter
+      - name: Validate add-skill frontmatter
         run: |
           python3 scripts/check-frontmatter.py \
-            opencode/agent/*.md \
-            opencode/command/*.md
+            skills/**/SKILL.md
