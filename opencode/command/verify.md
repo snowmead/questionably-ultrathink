@@ -1,33 +1,53 @@
 ---
-description: Verify factual claims in a response using Chain of Verification
+description: Verify a factual claim or answer a question with self-verification using the atomic solver
 ---
 
 # /verify Command
 
-Verify factual claims using Chain of Verification.
+Verify a factual claim or answer a question with built-in self-verification.
 
 <steps>
 ## Execution Steps
 
 1. **Identify what to verify:**
-   - The most recent response (default)
    - A specific statement the user provides
-   - Specific claims the user highlights
+   - The most recent claim or answer
+   - A question the user wants answered with verification
 
-2. **Invoke the chain-of-verification agent:**
-   ```
-   Task:
-   - @chain-of-verification
-   - prompt: "Verify these claims: {content to verify}"
-   ```
+2. **Formulate as an atomic question:**
+   - If the user provided a claim, convert to a verification question
+   - If already a question, use as-is
+   - Ensure the question is self-contained and atomic
 
-3. **Present results** showing:
-   - List of claims checked
-   - Verification status for each (✓ VERIFIED / ⚠️ INCONSISTENT / ❓ UNCERTAIN)
-   - Any corrections needed
+3. **Invoke the cov-atomic-solver agent:**
+
+       Task:
+       - @cov-atomic-solver
+       - prompt: "{the question or claim to verify}"
+
+   **IMPORTANT:** Pass ONLY the question/claim text. No additional context.
+
+4. **Present results** showing:
+   - The verified answer
+   - Self-verification results (claims checked, status for each)
+   - Sources consulted
    - Overall confidence assessment
 </steps>
 
+<examples>
+## Example Usage
+
+**Verify a claim:**
+User: "/verify React was released in 2013"
+→ Invoke solver with: "When was React first publicly released?"
+
+**Answer with verification:**
+User: "/verify What is Redis's per-key memory overhead?"
+→ Invoke solver with: "What is Redis's per-key memory overhead?"
+</examples>
+
 <follow_up>
-If inconsistencies are found, present the corrected information clearly and offer to regenerate the response with corrections applied.
+If verification finds discrepancies or low confidence:
+- Present the corrected/verified information clearly
+- Offer to re-verify with additional sources if needed
 </follow_up>

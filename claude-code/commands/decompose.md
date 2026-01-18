@@ -1,33 +1,37 @@
 ---
 name: decompose
-description: Decompose a complex problem into atomic sub-questions using Atom of Thoughts
+description: Decompose a complex problem into atomic sub-questions using Atom of Thoughts Graph Generator
 allowed-tools: [Task, AskUserQuestion, Read]
 ---
 
 # /decompose Command
 
-Decompose the specified problem into atomic sub-questions.
+Decompose the specified problem into atomic sub-questions (graph construction only, no solving).
 
 <steps>
 ## Execution Steps
 
 1. **Identify the problem** from context or ask the user for clarification
 
-2. **Invoke the atom-of-thoughts agent:**
+2. **Generate a session ID** (8 alphanumeric characters)
+
+3. **Invoke the aot-graph-generator agent:**
 
        Task tool:
-       - subagent_type: "questionably-ultrathink:atom-of-thoughts"
-       - prompt: "Decompose this problem: {problem statement}"
+       - subagent_type: "questionably-ultrathink:aot-graph-generator"
+       - prompt: "Session ID: {session-id}. Rigor: standard. Build the question DAG for this query: {problem statement}"
 
-3. **Present results** showing:
+4. **Present results** showing:
 
-   - The atom dependency graph with dependency levels
-   - Solutions for each atom
-   - Verification summary (which atoms have `needs_cov: true`)
-   - The final synthesized answer
+   - The atom dependency graph with levels
+   - The questions at each level (NO answers - this is graph construction only)
+   - The solve order for processing
+   - Files created in `.questionably-ultrathink/{session-id}/`
 
 </steps>
 
 \<follow\_up\>
-If atoms have `needs_cov: true`, offer to run `/verify` on them.
+After decomposition, offer to:
+- Run `/questionably-ultrathink` to solve all atoms with verification
+- Manually solve individual atoms for exploration
 \</follow\_up\>
