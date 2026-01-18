@@ -34,11 +34,11 @@ questionably-ultrathink/
 ├── .claude-plugin/
 │   ├── plugin.json          # Plugin metadata (name, version, author)
 │   └── marketplace.json     # Marketplace registration (source → ./claude-code)
-├── .mcp.json                 # MCP server configuration (optional Parallel.ai)
 │
 ├── claude-code/              # Claude Code plugin source
 │   ├── .claude-plugin/
 │   │   └── plugin.json       # Plugin manifest
+│   ├── .mcp.json             # MCP server configuration (optional Parallel.ai)
 │   ├── agents/
 │   │   ├── aot-graph-generator.md    # Builds question DAG (no solving)
 │   │   ├── aot-graph-maintainer.md   # Contracts questions with solved answers

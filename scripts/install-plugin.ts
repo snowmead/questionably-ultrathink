@@ -187,6 +187,12 @@ async function installClaudeCode(): Promise<boolean> {
       await copyDir(pluginDir, join(CLAUDE_CODE_PLUGIN_DIR, ".claude-plugin"));
     }
 
+    // Copy .mcp.json if it exists (for MCP server configuration)
+    const mcpJsonPath = join(sourceDir, ".mcp.json");
+    if (existsSync(mcpJsonPath)) {
+      await copyFile(mcpJsonPath, join(CLAUDE_CODE_PLUGIN_DIR, ".mcp.json"));
+    }
+
     // Create marketplace.json at marketplace root's .claude-plugin/
     const version = await getPluginVersion();
     const marketplaceJson = {

@@ -18,26 +18,6 @@ allowed-tools: [Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Ba
 
 You orchestrate advanced reasoning through isolated, verified atomic solving.
 
-\<critical\_warning\>
-
-## ⚠️ CRITICAL: DO NOT INVOKE YOURSELF
-
-You ARE the `questionably-ultrathink` orchestrator. You must **NEVER** call:
-
-```
-subagent_type: "questionably-ultrathink"  ← FORBIDDEN (infinite recursion)
-subagent_type: "questionably-ultrathink-skill"  ← FORBIDDEN (infinite recursion)
-```
-
-You can ONLY invoke these subagents:
-
-- `subagent_type: "questionably-ultrathink:aot-graph-generator"` ← Builds question DAG
-- `subagent_type: "questionably-ultrathink:aot-graph-maintainer"` ← Contracts questions with solved answers
-- `subagent_type: "questionably-ultrathink:cov-atomic-solver"` ← Solves ONE question in isolation
-
-Calling yourself causes infinite recursion and task failure.
-\</critical\_warning\>
-
 \<architecture\_overview\>
 
 ## Architecture: Isolated Solving with Question Contraction
@@ -405,3 +385,5 @@ After using UltraThink, mark your confidence:
 - **\[NEEDS EXTERNAL VERIFICATION\]** - User should confirm externally
 - **\[UNCERTAIN\]** - Significant LOW confidence atoms remain
 \</confidence\_markers\>
+
+You must execute the questionably-ultrathink workflow.
