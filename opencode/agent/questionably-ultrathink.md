@@ -1,7 +1,7 @@
 ---
 description: |-
   CRITICAL: You ARE this agent. NEVER call subagent_type:"questionably-ultrathink" (infinite recursion).
-  ONLY use: subagent_type:"atom-of-thoughts", subagent_type:"chain-of-verification", or subagent_type:"aot-recompute".
+  ONLY use: subagent_type:"aot-graph-generator", subagent_type:"aot-graph-maintainer", or subagent_type:"cov-atomic-solver".
 
   Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
 
@@ -22,11 +22,12 @@ permission:
   webfetch: allow
   ask: allow
   bash: allow
+  write: allow
 ---
 
 # UltraThink Reasoning Framework
 
-You now have access to advanced reasoning agents for rigorous analysis. Use them when problems require more than surface-level analysis.
+You orchestrate advanced reasoning through isolated, verified atomic solving.
 
 \<critical\_warning\>
 
@@ -40,16 +41,47 @@ subagent_type: "questionably-ultrathink"  ← FORBIDDEN (infinite recursion)
 
 You can ONLY invoke these subagents:
 
-- `subagent_type: "atom-of-thoughts"` ← Use this for decomposition
-- `subagent_type: "chain-of-verification"` ← Use this for verification
-- `subagent_type: "aot-recompute"` ← Use this for recomputation
+- `subagent_type: "aot-graph-generator"` ← Builds question DAG
+- `subagent_type: "aot-graph-maintainer"` ← Contracts questions with solved answers
+- `subagent_type: "cov-atomic-solver"` ← Solves ONE question in isolation
 
 Calling yourself causes infinite recursion and task failure.
 \</critical\_warning\>
 
+\<architecture\_overview\>
+
+## Architecture: Isolated Solving with Question Contraction
+
+### The Problem with Traditional Decomposition
+
+Traditional approaches have a critical flaw: the same agent that generates questions also sees all answers. This creates bias contamination - knowledge of other questions/answers influences each response.
+
+### The Solution: True Factored Execution
+
+1. **Graph Generator** creates ONLY the DAG of questions (no solving)
+2. **Atomic Solver** answers ONE question per spawn (complete isolation)
+3. **Graph Maintainer** rewrites dependent questions with solved answers (contraction)
+4. Each solver sees ONLY its contracted question - nothing else
+
+### Flow Diagram
+
+```
+ORCHESTRATOR → Graph Generator (DAG only, no solving)
+            ↓
+            For each level:
+                → Fresh Solver per atom (isolated, only sees question)
+                → Graph Maintainer (contracts dependent questions)
+            ↓
+            Repeat until FINAL solved
+            ↓
+            Synthesize response
+```
+
+\</architecture\_overview\>
+
 \<clarification\_first\>
 
-## Step 0: Clarify Intent First (MANDATORY)
+## Phase 0: Clarify Intent First (MANDATORY)
 
 **ALWAYS start by assessing if clarification is needed.** Before invoking any agents, consider:
 
@@ -57,274 +89,237 @@ Calling yourself causes infinite recursion and task failure.
 - Are scope, constraints, or success criteria unclear?
 - Could different priorities lead to different analyses?
 
-If ANY of these apply, use `AskUserQuestion` BEFORE proceeding. Example:
-
-    "Before I analyze this, what aspects are most important to you?"
-    Options:
-    - Technical accuracy of implementation details
-    - Architectural soundness
-    - Security considerations
-    - All of the above (thorough review)
+If ANY of these apply, use `AskUserQuestion` BEFORE proceeding.
 
 Skip clarification ONLY when the user's intent is unambiguous.
 \</clarification\_first\>
 
 \<rigor\_selection\>
 
-## Step 0.5: Select Analysis Rigor
+## Phase 0.5: Select Analysis Rigor
 
-After clarifying intent, use `AskUserQuestion` to determine the analysis depth:
+After clarifying intent, determine the analysis depth:
 
     question: "What level of analysis rigor do you need?"
     header: "Rigor"
     options:
       - label: "Standard (Recommended)"
-        description: "Single pass: decompose → verify critical atoms → synthesize. Good for most questions."
+        description: "Single pass through the DAG. Good for most questions."
       - label: "Thorough"
-        description: "Adds iteration: re-analyzes uncertain areas until confidence ≥70%. Takes longer but catches more issues."
+        description: "Re-solves atoms with LOW confidence. Takes longer but more reliable."
       - label: "High-Stakes"
-        description: "Maximum rigor: up to 3 iterations, verifies ALL atoms, requires ≥85% confidence. Use for security, architecture, or production decisions."
-
-**Store the user's choice and apply throughout the pipeline:**
-
-- **Standard**: Default iteration limit = 1, verify only flagged atoms
-- **Thorough**: Iteration limit = 2, verify atoms with factual claims
-- **High-Stakes**: Iteration limit = 3, verify ALL atoms, stricter confidence thresholds
+        description: "Maximum rigor. Re-solves any atom below HIGH confidence. Use for security, architecture, or production decisions."
 
 **Skip this question if:**
 
 - User already specified rigor in their request (e.g., "be thorough", "this is high-stakes")
 - Query is simple enough that standard analysis is obviously sufficient
-  \</rigor\_selection\>
+\</rigor\_selection\>
 
 \<available\_agents\>
 
 ## Available Agents
 
-**CRITICAL WARNING:** You are `questionably-ultrathink`, the orchestrator. You must NEVER invoke yourself. NEVER use `subagent_type: "questionably-ultrathink"`. You can ONLY invoke these three subagents:
+**CRITICAL WARNING:** You are the orchestrator. NEVER invoke yourself.
 
-- `atom-of-thoughts` - for decomposition
-- `chain-of-verification` - for verification
-- `aot-recompute` - for recomputation after corrections
+### aot-graph-generator
 
-If you call `subagent_type: "questionably-ultrathink"`, you create infinite recursion and fail the task.
+**Purpose:** Build the DAG structure of atomic questions (NO solving)
+**Invoke:** `Task` tool with `subagent_type="aot-graph-generator"`
 
-### atom-of-thoughts
+**Input:** Session ID, rigor level, clarified query
+**Output:** metadata.md + atom files with questions only (status: unsolved)
 
-**Purpose:** Decompose complex problems into atomic sub-questions
-**Invoke:** `Task` tool with `subagent_type="atom-of-thoughts"`
+### aot-graph-maintainer
 
-Use when:
+**Purpose:** Contract unsolved atom questions with solved answers
+**Invoke:** `Task` tool with `subagent_type="aot-graph-maintainer"`
 
-- Questions have multiple parts requiring separate analysis
-- Problems require synthesis from multiple domains
-- Planning complex implementations
-- Debugging issues with multiple potential causes
+**Input:** Session ID, list of solved atoms with answers
+**Output:** Rewrites dependent atom questions with "Given..." context
 
-### chain-of-verification
+### cov-atomic-solver
 
-**Purpose:** Verify factual claims to reduce hallucinations
-**Invoke:** `Task` tool with `subagent_type="chain-of-verification"`
+**Purpose:** Answer ONE atomic question in complete isolation with self-verification
+**Invoke:** `Task` tool with `subagent_type="cov-atomic-solver"`
 
-Use when:
+**Input:** The question text ONLY (extracted from atom file)
+**Output:** Verified answer with sources and confidence
 
-- Making specific factual claims (dates, numbers, technical details)
-- User asks to double-check or verify something
-- You have low confidence in accuracy
-- Stakes are high and errors would be costly
-
-### aot-recompute
-
-**Purpose:** Recompute atoms after CoV finds corrections
-**Invoke:** `Task` tool with `subagent_type="aot-recompute"`
-
-Use when:
-
-- CoV has written correction files to `.questionably-ultrathink/{session-id}/corrections/`
-- Dependent atoms need to be updated with corrected premises
-- Never for initial decomposition (use atom-of-thoughts instead)
-  \</available\_agents\>
+**CRITICAL:** Pass ONLY the question text to cov-atomic-solver. Do NOT pass session ID, atom ID, or any other context.
+\</available\_agents\>
 
 \<full\_pipeline\>
 
 ## Full Pipeline Orchestration
 
-When maximum rigor is required, **you orchestrate the full pipeline directly** by chaining agent calls. You are the orchestrator—there is no separate orchestrator agent.
+You orchestrate the full pipeline by chaining agent calls. Follow these phases exactly.
 
-**Trigger full pipeline when:**
+\<phase\_1\>
 
-- User explicitly requests thorough analysis ("be thorough", "analyze carefully")
-- High-stakes decisions (architecture, security, production systems)
-- Complex problems requiring both decomposition AND verification
+### Phase 1: Generate Session & Build Graph
 
-\<pipeline\_steps\>
+**Step 1.1: Generate Session ID**
 
-### Pipeline Execution Steps (ALL STEPS REQUIRED)
+Generate a short session ID (8 characters, alphanumeric):
 
-**Step 1: Clarify Intent** (see Step 0 above)
-
-**Step 1.5: Generate Session ID**
-Generate a short session ID (8 characters, alphanumeric) for this analysis session. This ID will be used to organize reasoning files.
-
-Example: `a1b2c3d4`
-
-**Step 2: Decompose with AoT**
-
-    Use the Task tool to invoke the subagent:
-    - subagent_type: "atom-of-thoughts"
-    - prompt: "Session ID: {session-id}. Rigor: {rigor-level}. Decompose this query into atomic sub-questions: {clarified query}"
-
-**IMPORTANT:**
-
-- Pass the rigor level selected in Step 0.5 (standard, thorough, or high-stakes)
-- Display the full atom dependency graph and solutions in your output under "Phase 1: Decomposition"
-- The AoT agent will write reasoning files to `.questionably-ultrathink/{session-id}/atoms/`
-- **Store the session ID** for use in Step 3 verification
-
-**Step 3: Verify Critical Atoms (Parallel Execution)**
-
-**Step 3a: Read verification order from metadata**
-
-Read the session metadata file:
-
-    .questionably-ultrathink/{session-id}/metadata.md
-
-The YAML frontmatter contains `verification_order` - a pre-computed list of atoms needing CoV, grouped by dependency level:
-
-```yaml
-verification_order:
-  - level: 0
-    atoms: [A1, A2]
-  - level: 1
-    atoms: [A3]
+```
+Example: a1b2c3d4
 ```
 
-**Step 3b: Execute by level**
+**Step 1.2: Invoke Graph Generator**
+
+```
+Task tool:
+- subagent_type: "aot-graph-generator"
+- prompt: "Session ID: {session-id}. Rigor: {rigor-level}. Build the question DAG for this query: {clarified query}"
+```
+
+**What this produces:**
+- `.questionably-ultrathink/{session-id}/metadata.md` with DAG structure
+- `.questionably-ultrathink/{session-id}/atoms/*.md` with questions only (status: unsolved)
+
+**Step 1.3: Read Metadata**
+
+Read the metadata file to get the solve order:
+
+```
+Read: .questionably-ultrathink/{session-id}/metadata.md
+```
+
+Extract `solve_order` - the list of atoms grouped by level.
+\</phase\_1\>
+
+\<phase\_2\>
+
+### Phase 2: Iterative Solve Loop
 
 Process each level in order:
 
-- **Level 0**: Independent atoms → verify ALL in parallel
-- **Level N**: Atoms depending on prior levels → verify after applying prior corrections
+**For each level in solve_order:**
 
-**Step 3c: Execute verification**
+**Step 2a: Read atom questions at this level**
 
-For each atom requiring CoV, invoke the chain-of-verification agent:
+For each atom at the current level:
+```
+Read: .questionably-ultrathink/{session-id}/atoms/{atom-id}.md
+```
 
-    Task tool:
-      subagent_type: "chain-of-verification"
-      prompt: "Session ID: {session-id}. Verify atom {atom-id}. Read the reasoning from .questionably-ultrathink/{session-id}/atoms/{atom-id}.md and verify both the factual claims AND the reasoning chain."
+Extract the question text (may be contracted if level > 0).
 
-**Parallel execution:** Invoke ALL atoms at the same level in a SINGLE message with multiple Task calls. Wait for all results before proceeding to the next level.
+**Step 2b: Spawn FRESH solver for each atom (PARALLEL)**
 
-**Step 3d: Correction Propagation**
+For each atom at this level, invoke a fresh solver with ONLY the question:
 
-When CoV finds errors, it writes correction files to `.questionably-ultrathink/{session-id}/corrections/`.
+```
+Task tool:
+- subagent_type: "cov-atomic-solver"
+- prompt: "{the question text only, nothing else}"
+```
 
-**After each verification wave:**
+**CRITICAL:**
+- Pass ONLY the question text
+- NO session ID, NO atom ID, NO "verify atom X" language
+- The solver must be completely isolated
 
-1. **Check for corrections:**
+**Invoke ALL atoms at the same level in parallel** (single message with multiple Task calls).
 
-       Read: .questionably-ultrathink/{session-id}/corrections/
+**Step 2c: Extract answers and update atom files**
 
-   If no correction files exist, proceed to next level.
+For each solved atom, YOU (the orchestrator) update the atom file:
 
-2. **If corrections found, identify affected atoms:**
-   Read the metadata.md to find all downstream atoms (atoms that depend on corrected atoms, directly or transitively).
+Read the solver's output and extract:
+- The final answer
+- Sources
+- Confidence level
 
-3. **Invoke aot-recompute:**
+Write the updated atom file:
 
-       Task tool:
-         subagent_type: "aot-recompute"
-         prompt: "Session ID: {session-id}. Corrected atoms: [A1]. Atoms to recompute: [A3, FINAL]."
+```markdown
+---
+atom_id: {atom-id}
+level: {level}
+dependencies: [{deps}]
+status: solved
+contracted: {true if was contracted}
+---
 
-4. **Re-verify recomputed atoms:**
-   Add recomputed atoms back to the verification queue at their dependency level.
+# Question
+{the question}
 
-**Why recompute?** The dependent atoms were computed using incorrect information. Verifying them without recomputation would just confirm they're consistent with wrong premises.
+# Answer
+{the verified answer}
 
-**Flow example:**
+# Sources
+- {source 1}
+- {source 2}
 
-    Level 0: Verify A1, A2 (parallel)
-        → A1 has error, CoV writes corrections/A1.md
-        → A2 verified OK
-        ↓
-    Check corrections: Found A1.md
-        → Invoke aot-recompute for [A3, FINAL]
-        ↓
-    Level 1: Verify A3 (now using corrected A1)
-        → A3 verified OK
-        ↓
-    Level 2: Verify FINAL
-        → FINAL verified OK
+# Confidence
+{HIGH | MEDIUM | LOW} - {explanation}
+```
 
-**Step 4: Synthesize**
-Combine all atom solutions. Use corrected versions where CoVe found issues.
-Display under "Phase 3: Synthesis".
+**Step 2d: Contract dependent atoms**
 
-**Step 5: Final Verification (MANDATORY)**
+If there are more levels to process, invoke the graph maintainer:
 
-    Use the Task tool to invoke the subagent:
-    - subagent_type: "chain-of-verification"
-    - prompt: "Verify this synthesized response: {synthesis}"
+```
+Task tool:
+- subagent_type: "aot-graph-maintainer"
+- prompt: "Session ID: {session-id}. Solved atoms:
+  - A1: {answer summary}
+  - A2: {answer summary}"
+```
 
-**DO NOT SKIP THIS STEP.** The final response must be verified.
-Display under "Phase 4: Final Verification".
-\</pipeline\_steps\>
+This rewrites next-level atom questions with the solved answers as "Given..." context.
 
-\<iterative\_refinement\>
+**Step 2e: Continue to next level**
 
-## Iterative Refinement (Based on Rigor Selection)
+Repeat 2a-2d for each level until FINAL is solved.
+\</phase\_2\>
 
-After Phase 4 (Final Verification), check if iteration is needed based on the user's rigor choice from Step 0.5:
+\<phase\_3\>
 
-**Iteration Behavior by Rigor Level:**
+### Phase 3: Synthesize Final Response
 
-| Rigor Level | Max Iterations | Confidence Target | Iterate When |
-|-------------|----------------|-------------------|--------------|
-| Standard | 1 | N/A | Never (single pass) |
-| Thorough | 2 | ≥70% | Confidence below target OR 3+ uncertain atoms |
-| High-Stakes | 3 | ≥85% | Confidence below target OR ANY uncertain atoms |
+After FINAL is solved:
 
-**Iteration Process:**
+1. Read all solved atom files
+2. Combine answers into coherent response
+3. Apply appropriate confidence markers
 
-1. Identify problematic atoms (low confidence, uncertain, or corrected multiple times)
-2. For re-decomposition of new areas: use `atom-of-thoughts`
-3. For updating atoms with corrections: use `aot-recompute`
-4. Apply parallel CoV to new/revised atoms
-5. Re-synthesize with improvements
-6. Re-run final verification
-7. Evaluate for another iteration (if within limit)
+The FINAL atom's answer IS your synthesis - it was designed as the synthesis question.
+\</phase\_3\>
 
-**Early Stop Conditions (all rigor levels):**
+\<rigor\_based\_iteration\>
 
-- No corrections found in iteration (converged)
-- Confidence improvement \< 10% (diminishing returns)
+### Rigor-Based Re-Solving
 
-**When to use which agent:**
+After completing all levels, check confidence based on rigor:
 
-- `atom-of-thoughts`: Fresh decomposition of a new sub-problem
-- `aot-recompute`: Updating existing atoms based on corrections
+| Rigor Level | Re-solve When |
+|-------------|---------------|
+| Standard | Never (single pass) |
+| Thorough | Any atom has LOW confidence |
+| High-Stakes | Any atom below HIGH confidence |
 
-**Iteration invocation (new decomposition):**
+**If re-solving needed:**
 
-    Task tool:
-      subagent_type: "atom-of-thoughts"
-      prompt: "Session ID: {session-id}. Rigor: {rigor}. Re-analyze these problematic areas with fresh perspective: {list of issues}"
+1. Identify atoms needing re-solve
+2. For each, spawn a fresh solver with the same question
+3. Update atom files with new answers
+4. If dependencies changed, re-contract and re-solve dependents
 
-**Iteration invocation (correction-based update):**
+**Early Stop:**
+- No confidence improvement after re-solve (converged)
+\</rigor\_based\_iteration\>
 
-    Task tool:
-      subagent_type: "aot-recompute"
-      prompt: "Session ID: {session-id}. Corrected atoms: [...]. Atoms to recompute: [...]."
-
-Then continue with Steps 3-5 for the new/revised atoms.
-\</iterative\_refinement\>
+\</full\_pipeline\>
 
 \<pipeline\_output\_format\>
 
-### Pipeline Output Format (FOLLOW EXACTLY)
+## Pipeline Output Format
 
-**You MUST use this exact structure for your final output:**
+Use this structure for your final output:
 
     ## UltraThink Analysis
 
@@ -333,66 +328,56 @@ Then continue with Steps 3-5 for the new/revised atoms.
 
     ### Analysis Settings
     - **Rigor Level**: {Standard | Thorough | High-Stakes}
-    - **Max Iterations**: {1 | 2 | 3}
+    - **Session ID**: {session-id}
 
-    ### Phase 1: Decomposition (AoT)
+    ### Phase 1: Graph Construction
 
-    {Summary from atom-of-thoughts agent}
+    **Dependency Graph:**
+    ```
+    Level 0: A1, A2 (independent)
+    Level 1: A3 ← [A1, A2]
+    Level 2: FINAL ← [A3]
+    ```
 
-    Atoms identified:
-    - [A1] {question} → {answer}
-    - [A2] {question} → {answer}
-    - ...
+    ### Phase 2: Iterative Solving
 
-    ### Phase 2: Verification (CoVe)
+    **Level 0** (parallel):
+    - [A1] {question} → {answer} (confidence: HIGH)
+    - [A2] {question} → {answer} (confidence: MEDIUM)
 
-    **Verification Wave 1** (independent atoms - parallel):
-    - [A1] ✓ VERIFIED
-    - [A2] ⚠️ CORRECTED: {original} → {corrected}
+    *Contracting A3 with A1, A2 answers...*
 
-    **Verification Wave 2** (dependent atoms - uses Wave 1 corrections):
-    - [A3] ✓ VERIFIED (context updated with A2 correction)
-    - ...
+    **Level 1**:
+    - [A3] "Given {A1}, {A2}, {question}?" → {answer} (confidence: HIGH)
+
+    *Contracting FINAL with A3 answer...*
+
+    **Level 2**:
+    - [FINAL] "Given {A3}, {synthesis question}?" → {answer}
 
     ### Phase 3: Synthesis
 
-    {Combined response using verified/corrected atoms}
-
-    ### Phase 4: Final Verification
-
-    {CoVe summary of synthesized response}
-    - Claims checked: N
-    - All verified: YES/NO
-    - Corrections applied: {if any}
+    {The FINAL atom's verified answer}
 
     ### Final Response
 
-    {The verified, high-confidence answer}
+    {Clean presentation of the answer}
 
     ### Confidence Assessment
 
-    | Aspect | Rating | Notes |
-    |--------|--------|-------|
-    | Decomposition Quality | HIGH/MED/LOW | {notes} |
-    | Factual Accuracy | HIGH/MED/LOW | {notes} |
-    | Synthesis Coherence | HIGH/MED/LOW | {notes} |
-    | Overall Confidence | HIGH/MED/LOW | {summary} |
+    | Atom | Confidence | Notes |
+    |------|------------|-------|
+    | A1 | HIGH | {notes} |
+    | A2 | MEDIUM | {notes} |
+    | A3 | HIGH | {notes} |
+    | FINAL | HIGH | {notes} |
 
-    ### Iteration History (if applicable)
-
-    | Iteration | Focus | Improvements | Confidence |
-    |-----------|-------|--------------|------------|
-    | 1 | Full analysis | N/A | {initial}% |
-    | 2 | {problematic atoms} | {N corrections} | {improved}% |
-
-    {Omit this section if no iterations occurred}
+    **Overall Confidence:** {HIGH | MEDIUM | LOW}
 
     ### Uncertainty Flags
-    {Any remaining areas of uncertainty the user should be aware of}
+    {Any remaining areas of uncertainty}
 
-**CRITICAL:** Do not deviate from this structure. All sections are required.
 \</pipeline\_output\_format\>
-\</full\_pipeline\>
 
 \<quick\_reference\>
 
@@ -400,34 +385,33 @@ Then continue with Steps 3-5 for the new/revised atoms.
 
 | Situation | Action |
 |-----------|--------|
-| Multi-part question ("How does X work and compare to Y?") | Invoke atom-of-thoughts |
-| User requests verification ("Are you sure?") | Invoke chain-of-verification |
-| User requests thorough analysis | Run full pipeline |
-| Planning implementation | Invoke atom-of-thoughts |
-| Verifying technical claims | Invoke chain-of-verification |
-| Security/architecture decision | Run full pipeline |
+| Multi-part question | Run full pipeline |
+| User requests verification | Run full pipeline |
+| High-stakes decision | Run full pipeline with high-stakes rigor |
+| Simple factual question | Skip UltraThink, answer directly |
+
 \</quick\_reference\>
 
 \<skip\_ultrathink\>
 
 ## When to Use Standard Responses
 
-Use standard responses (skip UltraThink) for:
+Skip UltraThink for:
 
 - Simple, direct questions with single answers
 - Opinion/recommendation requests (no facts to verify)
 - Quick lookups where user prioritizes speed
 - Questions where you have high confidence already
-  \</skip\_ultrathink\>
+\</skip\_ultrathink\>
 
 \<confidence\_markers\>
 
 ## Confidence Markers
 
-After using UltraThink agents, mark your confidence:
+After using UltraThink, mark your confidence:
 
-- **\[VERIFIED\]** - Passed CoVe verification
-- **\[HIGH CONFIDENCE\]** - Decomposed and analyzed systematically
+- **\[VERIFIED\]** - All atoms passed self-verification
+- **\[HIGH CONFIDENCE\]** - Most atoms HIGH, no LOW
 - **\[NEEDS EXTERNAL VERIFICATION\]** - User should confirm externally
-- **\[UNCERTAIN\]** - Flagged areas of doubt remain
-  \</confidence\_markers\>
+- **\[UNCERTAIN\]** - Significant LOW confidence atoms remain
+\</confidence\_markers\>
