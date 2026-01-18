@@ -95,11 +95,18 @@ The skill automatically activates when you use trigger phrases:
 
 When running the full pipeline, you can select analysis depth:
 
-| Level           | Iterations | Verification              | Confidence Target | Use Case                           |
-| --------------- | ---------- | ------------------------- | ----------------- | ---------------------------------- |
-| **Standard**    | 1          | Flagged atoms only        | N/A               | Most questions                     |
-| **Thorough**    | Up to 2    | Atoms with factual claims | ≥70%              | Important decisions                |
-| **High-Stakes** | Up to 3    | ALL atoms                 | ≥85%              | Security, architecture, production |
+| Level           | Re-solve Trigger | Confidence Threshold | Use Case                           |
+| --------------- | ---------------- | -------------------- | ---------------------------------- |
+| **Standard**    | Never            | N/A (single pass)    | Most questions                     |
+| **Thorough**    | LOW confidence   | score < 0.4          | Important decisions                |
+| **High-Stakes** | Below HIGH       | score < 0.7          | Security, architecture, production |
+
+**Confidence Scoring:** Atoms receive numerical scores (0.0-1.0) mapped to categories:
+- 0.0-0.4 = LOW
+- 0.4-0.7 = MEDIUM
+- 0.7-1.0 = HIGH
+
+For High-Stakes rigor, an optional **Judge** agent evaluates answer quality across atoms, checking for coherence, contradictions, and completeness.
 
 ## Optional: Parallel.ai MCP Integration
 
@@ -147,6 +154,15 @@ Traditional decomposition approaches have a critical flaw: the same agent that g
 │ questions only    │   │ question per      │   │ answers into      │
 │ (no solving)      │   │ spawn (isolated)  │   │ dependent Qs      │
 └───────────────────┘   └───────────────────┘   └───────────────────┘
+                                │
+                                ▼ (High-Stakes only)
+                        ┌───────────────────┐
+                        │    aot-judge      │
+                        │                   │
+                        │ Evaluates answer  │
+                        │ quality, flags    │
+                        │ atoms for re-solve│
+                        └───────────────────┘
 ```
 
 **Key Innovation: Complete Isolation**
@@ -184,7 +200,8 @@ Key features:
 - **Atomic Solver** answers ONE question per spawn (true isolation)
 - Self-verifies its own answer before returning
 - Uses web search for factual claims when needed
-- Flags confidence level (HIGH/MEDIUM/LOW)
+- Numerical confidence scoring (0.0-1.0) with categorical labels
+- Full verification trace preserved for audit trail
 - Complete independence from other atoms prevents bias propagation
 
 ## Output Format
@@ -204,14 +221,36 @@ Key features:
 ### Solved Atom (from Atomic Solver)
 
 ```
-## Solved: A1
+---
+atom_id: A1
+level: 0
+dependencies: []
+status: solved
+solved_at: 2025-01-18T15:30:00Z
+solve_attempts: 1
+confidence_score: 0.85
+---
 
-**Question:** What auth standard fits a stateless API?
+# Question
+What auth standard fits a stateless API?
 
-**Answer:** JWT (JSON Web Tokens) - stateless, self-contained, widely supported
+# Verification Trace
 
-**Confidence:** HIGH
-**Verification:** Self-verified via web search confirming JWT is the standard for stateless APIs
+## Initial Answer
+JWT tokens are commonly used for stateless APIs.
+
+## Self-Verification
+
+**Claim 1:** "JWT is the standard for stateless APIs"
+- Verification Q: What authentication standard is recommended for stateless REST APIs?
+- Independent Answer: JWT (JSON Web Tokens) - self-contained, no server-side session storage
+- Status: ✓ VERIFIED
+
+# Answer
+JWT (JSON Web Tokens) - stateless, self-contained, widely supported
+
+# Confidence
+0.85 (HIGH) - Multiple authoritative sources confirm JWT is the standard
 ```
 
 ### Contracted Question (from Graph Maintainer)
@@ -232,10 +271,12 @@ how should JWT tokens be stored client-side?
 
 After using UltraThink, responses are marked:
 
-- **[VERIFIED]** - Passed CoVe verification
-- **[HIGH CONFIDENCE]** - Decomposed and analyzed systematically
+- **[VERIFIED]** - All atoms passed self-verification
+- **[HIGH CONFIDENCE]** - Most atoms HIGH (0.7+), no LOW
 - **[NEEDS EXTERNAL VERIFICATION]** - User should confirm externally
-- **[UNCERTAIN]** - Flagged areas of doubt remain
+- **[UNCERTAIN]** - Significant LOW confidence atoms remain
+
+Each atom includes a numerical confidence score (0.0-1.0) with categorical label and explanation, providing an audit trail for how answers were derived.
 
 ## When NOT to Use
 

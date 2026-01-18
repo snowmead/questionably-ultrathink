@@ -120,26 +120,28 @@ Agents communicate via files in `.questionably-ultrathink/{session-id}/`:
 
 ```
 .questionably-ultrathink/{session-id}/
-├── graph.md          # DAG structure from Graph Generator
-├── atoms/
-│   ├── A1.md         # Solved answer for atom A1
-│   ├── A2.md
-│   └── FINAL.md
-└── contracted/       # Rewritten questions with baked-in answers
-    ├── A3.md         # A3 question with A1's answer baked in
-    └── ...
+├── metadata.md       # DAG structure and session config from Graph Generator
+└── atoms/
+    ├── A1.md         # Atom file (question → solved answer with verification trace)
+    ├── A2.md
+    ├── A3.md         # Contracted questions have "Given..." context inline
+    └── FINAL.md
 ```
+
+**Note:** Contractions happen inline within atom files (via "Given..." prefixes), not in a separate directory.
 
 **Data flow:**
 1. Skill generates session ID and determines rigor level
-2. Skill invokes Graph Generator → writes `graph.md` with DAG structure
-3. For each level, Skill spawns fresh Atomic Solvers (one per atom)
-4. Each solver writes its answer to `atoms/{atom_id}.md`
-5. Skill invokes Graph Maintainer → writes contracted questions for next level
+2. Skill invokes Graph Generator → writes `metadata.md` with DAG structure + atom files (questions only)
+3. For each level, Skill spawns fresh Atomic Solvers (one per atom, in parallel)
+4. Skill extracts solver output and updates atom files with answer, verification trace, sources, and confidence
+5. Skill invokes Graph Maintainer → rewrites next-level atom questions with "Given..." context
 6. Repeat until FINAL is solved
 7. Synthesize response from all solved atoms
 
 **Why files?** Subagents don't share context. Files enable inter-agent communication without bloating context windows.
+
+**Note on verification traces:** The solver outputs detailed self-verification steps. The skill preserves these traces in atom files for audit purposes, though the final response uses summarized answers.
 
 ## Confidence Markers
 
