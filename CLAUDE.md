@@ -40,9 +40,9 @@ questionably-ultrathink/
 │   ├── .claude-plugin/
 │   │   └── plugin.json       # Plugin manifest
 │   ├── agents/
-│   │   ├── atom-of-thoughts.md
-│   │   ├── chain-of-verification.md
-│   │   └── aot-recompute.md
+│   │   ├── aot-graph-generator.md    # Builds question DAG (no solving)
+│   │   ├── aot-graph-maintainer.md   # Contracts questions with solved answers
+│   │   └── cov-atomic-solver.md      # Solves ONE question in isolation
 │   ├── commands/
 │   │   ├── questionably-ultrathink.md
 │   │   ├── decompose.md
@@ -54,9 +54,9 @@ questionably-ultrathink/
 ├── opencode/                 # OpenCode source (independent)
 │   ├── agent/
 │   │   ├── questionably-ultrathink.md   # Primary orchestrator
-│   │   ├── atom-of-thoughts.md
-│   │   ├── chain-of-verification.md
-│   │   └── aot-recompute.md
+│   │   ├── aot-graph-generator.md       # Builds question DAG (no solving)
+│   │   ├── aot-graph-maintainer.md      # Contracts questions with solved answers
+│   │   └── cov-atomic-solver.md         # Solves ONE question in isolation
 │   └── command/
 │       ├── questionably-ultrathink.md
 │       ├── decompose.md
@@ -79,9 +79,9 @@ questionably-ultrathink/
 
 **Note:** The skill is named `questionably-ultrathink-skill` (not `questionably-ultrathink`) to avoid naming collision with the command. When the Skill tool looks up by name, having different names ensures the correct component is loaded.
 3. **Agents** are subagents invoked via the `Task` tool with `subagent_type`:
-   - `questionably-ultrathink:atom-of-thoughts` - Initial problem decomposition
-   - `questionably-ultrathink:chain-of-verification` - Verifies atoms and writes corrections
-   - `questionably-ultrathink:aot-recompute` - Updates dependent atoms after corrections found
+   - `questionably-ultrathink:aot-graph-generator` - Builds question DAG (no solving)
+   - `questionably-ultrathink:aot-graph-maintainer` - Contracts questions with solved answers
+   - `questionably-ultrathink:cov-atomic-solver` - Solves ONE question in isolation
 
 ## Plugin File Formats
 
@@ -97,10 +97,22 @@ Frontmatter with `name`, `description`, `model`, `tools`. Body contains agent be
 ## Key Implementation Details
 
 - Agents run on `haiku` model for efficiency
-- AoT follows Markov property: each atom depends only on immediate dependencies
-- CoVe uses "factored execution": verification questions answered independently without referencing original claims
-- Both agents have mandatory clarification gates before proceeding with analysis
-- Full pipeline requires all 5 phases: clarify → decompose → verify atoms → synthesize → final verification
+- **True factored execution**: each atomic solver sees ONLY its contracted question
+- Graph Generator creates DAG structure WITHOUT solving (prevents bias contamination)
+- Graph Maintainer "contracts" solved answers INTO dependent questions
+- Each solver spawn is completely isolated from other atoms
+- Follows Markov property: each atom depends only on immediate dependencies
+
+## Architecture: Isolated Solving
+
+The key innovation is **complete isolation**. Traditional approaches have the same agent see all questions/answers, causing bias. UltraThink solves this:
+
+1. **Graph Generator** creates ONLY the DAG of questions (no solving)
+2. **Atomic Solver** answers ONE question per spawn (complete isolation)
+3. **Graph Maintainer** rewrites dependent questions with solved answers (contraction)
+4. Each solver sees ONLY its contracted question - nothing else
+
+**Why this matters:** When a solver answers "How should JWT tokens be stored?", it doesn't know what other questions exist or how they were answered. It only sees the question with dependency answers baked in.
 
 ## Inter-Agent Communication
 
@@ -108,26 +120,24 @@ Agents communicate via files in `.questionably-ultrathink/{session-id}/`:
 
 ```
 .questionably-ultrathink/{session-id}/
-├── metadata.md       # Session config: rigor, atoms, levels, verification_order
+├── graph.md          # DAG structure from Graph Generator
 ├── atoms/
-│   ├── A1.md         # Detailed reasoning for atom A1
+│   ├── A1.md         # Solved answer for atom A1
 │   ├── A2.md
 │   └── FINAL.md
-└── corrections/      # Written by CoV when errors found
-    ├── A1.md         # Correction details for atom A1
+└── contracted/       # Rewritten questions with baked-in answers
+    ├── A3.md         # A3 question with A1's answer baked in
     └── ...
 ```
 
 **Data flow:**
 1. Skill generates session ID and determines rigor level
-2. Skill invokes AoT with session ID and rigor
-3. AoT writes `metadata.md` (with rigor, atoms, verification_order) and atom files
-4. Skill reads `metadata.md` to get verification order
-5. For each verification level, Skill invokes CoV for atoms needing verification
-6. CoV reads atom files, verifies, and writes correction files if errors found
-7. Skill checks for corrections after each wave
-8. If corrections exist, Skill invokes `aot-recompute` to update dependent atoms
-9. Recomputed atoms are re-verified before proceeding
+2. Skill invokes Graph Generator → writes `graph.md` with DAG structure
+3. For each level, Skill spawns fresh Atomic Solvers (one per atom)
+4. Each solver writes its answer to `atoms/{atom_id}.md`
+5. Skill invokes Graph Maintainer → writes contracted questions for next level
+6. Repeat until FINAL is solved
+7. Synthesize response from all solved atoms
 
 **Why files?** Subagents don't share context. Files enable inter-agent communication without bloating context windows.
 

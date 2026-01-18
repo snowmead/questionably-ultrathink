@@ -53,11 +53,12 @@ Run the full reasoning pipeline on a problem:
 
 1. Clarifies intent if needed
 2. Selects analysis rigor (standard/thorough/high-stakes)
-3. Decomposes into atomic questions (AoT) with complexity flagging
-4. Verifies critical atoms in parallel by dependency level (CoVe)
-5. Propagates corrections and recomputes dependent atoms
-6. Synthesizes and verifies final response
-7. Iterates if confidence is below threshold (thorough/high-stakes only)
+3. Graph Generator builds DAG of atomic questions (no solving)
+4. For each level: spawns isolated Atomic Solvers (one per question)
+5. Graph Maintainer contracts solved answers into dependent questions
+6. Repeats until FINAL atom is solved
+7. Synthesizes final response from all solved atoms
+8. Re-solves low-confidence atoms if rigor requires it
 
 ### `/decompose`
 
@@ -113,7 +114,9 @@ The plugin includes optional MCP servers for enhanced web search during verifica
 
 ## How It Works
 
-### Architecture
+### Architecture: Isolated Solving with Question Contraction
+
+Traditional decomposition approaches have a critical flaw: the same agent that generates questions also sees all answers, creating bias contamination. UltraThink solves this with **true factored execution**:
 
 ```
 ┌───────────────────────────────────────────────────────────────────┐
@@ -128,48 +131,37 @@ The plugin includes optional MCP servers for enhanced web search during verifica
 │                                                                   │
 │  1. Clarify intent (AskUserQuestion)                              │
 │  2. Select rigor level                                            │
-│  3. Generate session ID                                           │
-│  4. Invoke agents in sequence                                     │
-│  5. Check for corrections after each verification wave            │
-│  6. Iterate if confidence below threshold                         │
+│  3. Invoke Graph Generator (DAG only, no solving)                 │
+│  4. For each level: spawn isolated Atomic Solvers                 │
+│  5. Graph Maintainer contracts solved answers into questions      │
+│  6. Repeat until FINAL solved                                     │
+│  7. Synthesize final response                                     │
 └───────────┬───────────────────────┬───────────────────┬───────────┘
             │                       │                   │
             ▼                       ▼                   ▼
 ┌───────────────────┐   ┌───────────────────┐   ┌───────────────────┐
-│   atom-of-        │   │   chain-of-       │   │   aot-recompute   │
-│   thoughts        │   │   verification    │   │                   │
+│   aot-graph-      │   │   cov-atomic-     │   │   aot-graph-      │
+│   generator       │   │   solver          │   │   maintainer      │
 │                   │   │                   │   │                   │
-│ Decomposes        │   │ Verifies atoms    │   │ Updates atoms     │
-│ problem into      │   │ independently     │   │ after CoV         │
-│ atomic DAG        │   │ (factored exec)   │   │ corrections       │
-└─────────┬─────────┘   └─────────┬─────────┘   └─────────┬─────────┘
-          │                       │                       │
-          └───────────────────────┼───────────────────────┘
-                                  │
-                                  ▼
-┌───────────────────────────────────────────────────────────────────┐
-│              .questionably-ultrathink/{session-id}/               │
-│                   (File-Based Communication)                      │
-│                                                                   │
-│  metadata.md            atoms/              corrections/          │
-│  ├─ session_id          ├─ A1.md            ├─ A1.md (if errors)  │
-│  ├─ rigor               ├─ A2.md            └─ ...                │
-│  ├─ atoms (levels)      ├─ A3.md                                  │
-│  └─ verification_order  └─ FINAL.md                               │
-└───────────────────────────────────────────────────────────────────┘
+│ Builds DAG of     │   │ Answers ONE       │   │ Contracts solved  │
+│ questions only    │   │ question per      │   │ answers into      │
+│ (no solving)      │   │ spawn (isolated)  │   │ dependent Qs      │
+└───────────────────┘   └───────────────────┘   └───────────────────┘
 ```
+
+**Key Innovation: Complete Isolation**
+
+Each `cov-atomic-solver` spawn sees ONLY its contracted question - nothing else. This prevents bias contamination where knowledge of other questions/answers influences responses.
 
 **Data Flow:**
 
 1. **User invokes command** → Skill orchestrator begins
-2. **Orchestrator → AoT**: Decomposes problem, writes `metadata.md` + atom files
-3. **Orchestrator reads** `metadata.md` to get verification order (atoms grouped by dependency level)
-4. **Orchestrator → CoV**: Verifies atoms at each level (parallel within level)
-5. **CoV writes** correction files if errors found
-6. **Orchestrator checks** for corrections after each wave
-7. **If corrections exist → aot-recompute**: Updates dependent atoms with corrected premises
-8. **Recomputed atoms re-verified** before proceeding to next level
-9. **Final synthesis** combines all verified/corrected atoms
+2. **Graph Generator** creates the DAG of questions (no solving happens here)
+3. **For each dependency level**, orchestrator spawns fresh `cov-atomic-solver` instances
+4. **Each solver** answers its ONE question in complete isolation with self-verification
+5. **Graph Maintainer** rewrites dependent questions, baking in solved answers
+6. **Repeat** until FINAL atom is solved
+7. **Synthesize** final response from all solved atoms
 
 ### Atom of Thoughts (AoT)
 
@@ -177,13 +169,11 @@ Based on the paper ["Atom of Thoughts for Markov LLM Test-Time Scaling"](https:/
 
 Key features:
 
-- Decomposes problems into atomic questions
+- **Graph Generator** decomposes problems into atomic questions
 - Builds a DAG of dependencies with topological levels
-- Solves independent atoms in parallel
-- Contracts solved atoms into minimal context for dependent atoms
+- Questions are created WITHOUT solving (prevents contamination)
+- **Graph Maintainer** contracts solved atoms into dependent questions
 - Follows Markov property (each step depends only on immediate dependencies)
-- Flags atoms requiring verification (`needs_cov`) based on complexity heuristics
-- Persists reasoning to files for inter-agent communication
 
 ### Chain of Verification (CoVe)
 
@@ -191,54 +181,51 @@ Based on the paper ["Chain-of-Verification Reduces Hallucination in LLMs"](https
 
 Key features:
 
-- Extracts verifiable factual claims
-- Generates targeted verification questions
-- Answers each question **independently** (factored execution)
-- Compares independent answers to original claims
-- Reports inconsistencies with corrections
-- Verifies atoms in parallel by dependency level
-- Writes corrections to disk, triggering recomputation of dependent atoms
+- **Atomic Solver** answers ONE question per spawn (true isolation)
+- Self-verifies its own answer before returning
+- Uses web search for factual claims when needed
+- Flags confidence level (HIGH/MEDIUM/LOW)
+- Complete independence from other atoms prevents bias propagation
 
 ## Output Format
 
-### AoT Decomposition
+### Graph Structure (from Graph Generator)
 
 ```
-## Atom of Thoughts Decomposition
+## Atom of Thoughts - Question Graph
 
 ### Dependency Graph
-- [ATOM:A1] What auth standard fits a stateless API? (level 0, needs_cov: true)
-- [ATOM:A2] Where should tokens be validated? (level 0, needs_cov: false)
-- [ATOM:A3] How should tokens be stored client-side? (level 1, deps: [A1], needs_cov: true)
-- [ATOM:FINAL] Complete auth approach recommendation (level 2, deps: [A2, A3])
-
-### Solutions
-[ATOM:A1] JWT - stateless, self-contained, widely supported
-[ATOM:A2] Middleware layer before route handlers
-...
-
-### Verification Summary
-- [ATOM:A1] needs_cov: true, confidence: high
-- [ATOM:A2] needs_cov: false, confidence: high
-- [ATOM:A3] needs_cov: true, confidence: medium
+- [A1] What auth standard fits a stateless API? (level 0)
+- [A2] Where should tokens be validated? (level 0)
+- [A3] How should tokens be stored client-side? (level 1, deps: [A1])
+- [FINAL] Complete auth approach recommendation (level 2, deps: [A2, A3])
 ```
 
-### CoVe Report
+### Solved Atom (from Atomic Solver)
 
 ```
-## Chain of Verification Report
+## Solved: A1
 
-### Verification Results
+**Question:** What auth standard fits a stateless API?
 
-**Claim 1:** "React was released in 2013"
-- Verification Q: When was React first publicly released?
-- Independent Answer: React was released in May 2013 at JSConf US
-- Status: ✓ VERIFIED
+**Answer:** JWT (JSON Web Tokens) - stateless, self-contained, widely supported
 
-**Claim 2:** "Virtual DOM was invented by React"
-- Verification Q: Who invented the virtual DOM concept?
-- Independent Answer: While React popularized it, similar concepts existed earlier
-- Status: ⚠️ INCONSISTENT
+**Confidence:** HIGH
+**Verification:** Self-verified via web search confirming JWT is the standard for stateless APIs
+```
+
+### Contracted Question (from Graph Maintainer)
+
+```
+## Contracted: A3
+
+**Original Question:** How should tokens be stored client-side?
+
+**Contracted Question:** Given that JWT is the recommended auth standard for stateless APIs,
+how should JWT tokens be stored client-side?
+
+**Baked-in Context:**
+- A1: JWT - stateless, self-contained, widely supported
 ```
 
 ## Confidence Markers
