@@ -136,7 +136,7 @@ export async function writeInstalledPlugins(
 // ============================================================================
 
 const PLUGIN_NAME = "questionably-ultrathink";
-const MARKETPLACE_ID = "questionably-ultrathink-local";
+const MARKETPLACE_ID = "questionably-ultrathink";
 const PLUGIN_ID = `${PLUGIN_NAME}@${MARKETPLACE_ID}`;
 
 export interface RegisterOptions {
