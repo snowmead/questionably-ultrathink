@@ -5,11 +5,12 @@
  * This script:
  * 1. Copies Claude Code files from claude-code/ to dist/claude-code/
  * 2. Copies OpenCode files from opencode/ to dist/opencode/
+ * 3. Syncs version from package.json to all plugin.json files
  *
  * Run: bun scripts/build-dist.ts
  */
 
-import { copyFile, readdir, mkdir, rm } from "fs/promises";
+import { copyFile, readFile, writeFile, readdir, mkdir, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 
@@ -44,6 +45,43 @@ async function copyDir(src: string, dest: string): Promise<void> {
       await copyFile(srcPath, destPath);
     }
   }
+}
+
+async function getPackageVersion(): Promise<string> {
+  const pkgPath = join(ROOT_DIR, "package.json");
+  const content = await readFile(pkgPath, "utf-8");
+  const pkg = JSON.parse(content);
+  return pkg.version || "1.0.0";
+}
+
+async function updatePluginJsonVersion(
+  filePath: string,
+  version: string,
+): Promise<void> {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const content = await readFile(filePath, "utf-8");
+  const json = JSON.parse(content);
+  json.version = version;
+  await writeFile(filePath, JSON.stringify(json, null, 2) + "\n", "utf-8");
+}
+
+async function updateMarketplaceJsonVersion(
+  filePath: string,
+  version: string,
+): Promise<void> {
+  if (!existsSync(filePath)) {
+    return;
+  }
+
+  const content = await readFile(filePath, "utf-8");
+  const json = JSON.parse(content);
+  if (json.metadata) {
+    json.metadata.version = version;
+  }
+  await writeFile(filePath, JSON.stringify(json, null, 2) + "\n", "utf-8");
 }
 
 // ============================================================================
@@ -83,6 +121,39 @@ async function buildOpenCode(): Promise<void> {
   console.log("  ✓ Copied opencode/ → dist/opencode/");
 }
 
+async function syncVersions(): Promise<void> {
+  console.log("\nSyncing versions from package.json...");
+
+  const version = await getPackageVersion();
+  console.log(`  Version: ${version}`);
+
+  // Update dist/claude-code/.claude-plugin/plugin.json
+  const distPluginJson = join(DIST_CLAUDE_CODE, ".claude-plugin", "plugin.json");
+  if (existsSync(distPluginJson)) {
+    await updatePluginJsonVersion(distPluginJson, version);
+    console.log("  ✓ Updated dist/claude-code/.claude-plugin/plugin.json");
+  }
+
+  // Also update source files to keep them in sync
+  const sourcePluginJson = join(CLAUDE_CODE_DIR, ".claude-plugin", "plugin.json");
+  if (existsSync(sourcePluginJson)) {
+    await updatePluginJsonVersion(sourcePluginJson, version);
+    console.log("  ✓ Updated claude-code/.claude-plugin/plugin.json");
+  }
+
+  const rootPluginJson = join(ROOT_DIR, ".claude-plugin", "plugin.json");
+  if (existsSync(rootPluginJson)) {
+    await updatePluginJsonVersion(rootPluginJson, version);
+    console.log("  ✓ Updated .claude-plugin/plugin.json");
+  }
+
+  const marketplaceJson = join(ROOT_DIR, ".claude-plugin", "marketplace.json");
+  if (existsSync(marketplaceJson)) {
+    await updateMarketplaceJsonVersion(marketplaceJson, version);
+    console.log("  ✓ Updated .claude-plugin/marketplace.json");
+  }
+}
+
 // ============================================================================
 // Main
 // ============================================================================
@@ -95,6 +166,7 @@ async function main(): Promise<void> {
     await cleanDist();
     await buildClaudeCode();
     await buildOpenCode();
+    await syncVersions();
 
     console.log("\n✅ Build complete!");
     console.log("\nDistribution structure:");

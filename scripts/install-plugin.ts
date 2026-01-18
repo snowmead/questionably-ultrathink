@@ -11,17 +11,24 @@
  *   --opencode      Install only to OpenCode
  *   --both          Install to both platforms
  *   --auto, -y      Auto-detect and install without prompting
+ *   --uninstall     Uninstall the plugin (removes files and config)
  *
  * This script copies plugin files to the appropriate config directories:
  *   Claude Code: ~/.claude/plugins/questionably-ultrathink/
  *   OpenCode: ~/.config/opencode/
  */
 
-import { copyFile, readdir, mkdir, stat, rm } from "fs/promises";
+import { copyFile, readFile, readdir, mkdir, stat, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
 import * as p from "@clack/prompts";
+import {
+  registerPlugin,
+  unregisterPlugin,
+  isPluginRegistered,
+  getPluginId,
+} from "./settings-manager.ts";
 
 // ============================================================================
 // Configuration
@@ -30,6 +37,18 @@ import * as p from "@clack/prompts";
 // Determine if we're running from installed package or development
 const SCRIPT_DIR = import.meta.dir;
 const ROOT_DIR = join(SCRIPT_DIR, "..");
+
+// Plugin version (read from package.json)
+async function getPluginVersion(): Promise<string> {
+  try {
+    const pkgPath = join(ROOT_DIR, "package.json");
+    const content = await readFile(pkgPath, "utf-8");
+    const pkg = JSON.parse(content);
+    return pkg.version || "1.0.0";
+  } catch {
+    return "1.0.0";
+  }
+}
 
 // Check if dist/ exists (installed from npm) or use source files (development)
 const DIST_DIR = join(ROOT_DIR, "dist");
@@ -149,6 +168,67 @@ async function installClaudeCode(): Promise<boolean> {
     const pluginDir = join(sourceDir, ".claude-plugin");
     if (existsSync(pluginDir)) {
       await copyDir(pluginDir, join(CLAUDE_CODE_PLUGINS_DIR, ".claude-plugin"));
+    }
+
+    // Register with Claude Code's config files
+    const version = await getPluginVersion();
+    await registerPlugin({
+      pluginPath: CLAUDE_CODE_PLUGINS_DIR,
+      version: version,
+    });
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function uninstallClaudeCode(): Promise<boolean> {
+  try {
+    // Remove plugin files
+    if (existsSync(CLAUDE_CODE_PLUGINS_DIR)) {
+      await rm(CLAUDE_CODE_PLUGINS_DIR, { recursive: true });
+    }
+
+    // Unregister from Claude Code's config files
+    await unregisterPlugin();
+
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function uninstallOpenCode(): Promise<boolean> {
+  try {
+    const agentDir = join(OPENCODE_CONFIG_DIR, "agent");
+    const commandDir = join(OPENCODE_CONFIG_DIR, "command");
+
+    // Remove agent files
+    const agentFiles = [
+      "questionably-ultrathink.md",
+      "aot-graph-generator.md",
+      "aot-graph-maintainer.md",
+      "cov-atomic-solver.md",
+    ];
+    for (const file of agentFiles) {
+      const filePath = join(agentDir, file);
+      if (existsSync(filePath)) {
+        await rm(filePath);
+      }
+    }
+
+    // Remove command files
+    const commandFiles = [
+      "questionably-ultrathink.md",
+      "decompose.md",
+      "verify.md",
+    ];
+    for (const file of commandFiles) {
+      const filePath = join(commandDir, file);
+      if (existsSync(filePath)) {
+        await rm(filePath);
+      }
     }
 
     return true;
@@ -389,17 +469,59 @@ Options:
   --opencode      Install only to OpenCode (non-interactive)
   --both          Install to both platforms (non-interactive)
   --auto, -y      Auto-detect and install without prompting
+  --uninstall     Uninstall the plugin from all platforms
 
 Examples:
   npx questionably-ultrathink           # Interactive platform selection
   npx questionably-ultrathink -y        # Auto-detect and install
   npx questionably-ultrathink --both    # Install to both platforms
+  npx questionably-ultrathink --uninstall --both  # Uninstall from both
 `);
 }
 
 // ============================================================================
 // Main
 // ============================================================================
+
+async function runUninstall(
+  uninstallClaudeCodeFlag: boolean,
+  uninstallOpenCodeFlag: boolean,
+): Promise<void> {
+  console.log("UltraThink Plugin Uninstaller");
+  console.log("=============================\n");
+
+  let success = true;
+
+  if (uninstallClaudeCodeFlag) {
+    console.log("Uninstalling from Claude Code...");
+    const result = await uninstallClaudeCode();
+    if (result) {
+      console.log(`  Removed from: ${CLAUDE_CODE_PLUGINS_DIR}`);
+      console.log(`  Unregistered plugin: ${getPluginId()}`);
+    } else {
+      console.log("  Failed to uninstall (may not have been installed)");
+      success = false;
+    }
+  }
+
+  if (uninstallOpenCodeFlag) {
+    console.log("\nUninstalling from OpenCode...");
+    const result = await uninstallOpenCode();
+    if (result) {
+      console.log(`  Removed from: ${OPENCODE_CONFIG_DIR}`);
+    } else {
+      console.log("  Failed to uninstall (may not have been installed)");
+      success = false;
+    }
+  }
+
+  console.log("\n" + "=".repeat(40));
+  if (success) {
+    console.log("Uninstallation complete!");
+  } else {
+    console.log("Uninstallation completed with some issues.");
+  }
+}
 
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
@@ -419,6 +541,15 @@ async function main(): Promise<void> {
   const hasBothFlag = filteredArgs.includes("--both");
   const hasAutoFlag =
     filteredArgs.includes("--auto") || filteredArgs.includes("-y");
+  const hasUninstallFlag = filteredArgs.includes("--uninstall");
+
+  // Handle uninstall
+  if (hasUninstallFlag) {
+    const uninstallClaudeCode = hasClaudeCodeFlag || hasBothFlag || (!hasClaudeCodeFlag && !hasOpenCodeFlag);
+    const uninstallOpenCode = hasOpenCodeFlag || hasBothFlag || (!hasClaudeCodeFlag && !hasOpenCodeFlag);
+    await runUninstall(uninstallClaudeCode, uninstallOpenCode);
+    return;
+  }
 
   // Non-interactive modes
   if (hasClaudeCodeFlag || hasOpenCodeFlag || hasBothFlag) {

@@ -1,11 +1,18 @@
 {
   "name": "questionably-ultrathink",
-  "version": "1.0.0",
+  "version": "1.0.7",
   "description": "Advanced reasoning plugin integrating Chain of Verification (CoVe) and Atom of Thoughts (AoT) frameworks for rigorous, verifiable analysis",
   "author": {
     "name": "snowmead"
   },
   "repository": "https://github.com/snowmead/questionably-ultrathink",
   "license": "MIT",
-  "keywords": ["reasoning", "verification", "decomposition", "cove", "aot", "analysis"]
+  "keywords": [
+    "reasoning",
+    "verification",
+    "decomposition",
+    "cove",
+    "aot",
+    "analysis"
+  ]
 }
