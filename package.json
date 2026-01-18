@@ -1,6 +1,6 @@
 {
   "name": "questionably-ultrathink",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "Claude Code plugin integrating Atom of Thoughts (AoT) and Chain of Verification (CoVe) reasoning frameworks",
   "type": "module",
   "bin": {

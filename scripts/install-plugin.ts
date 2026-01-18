@@ -18,7 +18,7 @@
  *   OpenCode: ~/.config/opencode/
  */
 
-import { copyFile, readFile, readdir, mkdir, stat, rm } from "fs/promises";
+import { copyFile, readFile, writeFile, readdir, mkdir, stat, rm } from "fs/promises";
 import { existsSync } from "fs";
 import { join } from "path";
 import { homedir } from "os";
@@ -170,8 +170,31 @@ async function installClaudeCode(): Promise<boolean> {
       await copyDir(pluginDir, join(CLAUDE_CODE_PLUGINS_DIR, ".claude-plugin"));
     }
 
-    // Register with Claude Code's config files
+    // Create marketplace.json for Claude Code to recognize this as a valid marketplace
     const version = await getPluginVersion();
+    const marketplaceJson = {
+      name: "questionably-ultrathink",
+      owner: { name: "snowmead" },
+      metadata: {
+        description: "UltraThink reasoning framework plugin",
+        version: version,
+      },
+      plugins: [
+        {
+          name: "questionably-ultrathink",
+          description:
+            "Advanced reasoning plugin integrating Chain of Verification (CoVe) and Atom of Thoughts (AoT) frameworks",
+          source: ".",
+        },
+      ],
+    };
+    await writeFile(
+      join(CLAUDE_CODE_PLUGINS_DIR, ".claude-plugin", "marketplace.json"),
+      JSON.stringify(marketplaceJson, null, 2) + "\n",
+      "utf-8",
+    );
+
+    // Register with Claude Code's config files
     await registerPlugin({
       pluginPath: CLAUDE_CODE_PLUGINS_DIR,
       version: version,
