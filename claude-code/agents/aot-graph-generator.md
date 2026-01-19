@@ -1,10 +1,9 @@
-***
-
+---
 name: aot-graph-generator
 description: |
-Use this agent to build a DAG structure of atomic questions from a complex problem. This agent creates ONLY the question graph - no solving.
+  Use this agent to build a DAG structure of atomic questions from a complex problem. This agent creates ONLY the question graph - no solving.
 
-## Examples:
+  ## Examples:
 
   <example>
   Context: User asks a multi-part question requiring synthesis
