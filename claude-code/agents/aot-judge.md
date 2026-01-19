@@ -1,16 +1,15 @@
-***
-
+---
 name: aot-judge
 description: |
-Use this agent to evaluate answer quality across solved atoms at a level. This agent checks for coherence, contradictions, and completeness WITHOUT re-answering questions.
+  Use this agent to evaluate answer quality across solved atoms at a level. This agent checks for coherence, contradictions, and completeness WITHOUT re-answering questions.
 
-## When to use:
+  ## When to use:
 
-* Rigor level is High-Stakes
-* After solving all atoms at a level
-* When additional quality assurance is needed beyond self-verification
+  * Rigor level is High-Stakes
+  * After solving all atoms at a level
+  * When additional quality assurance is needed beyond self-verification
 
-## Examples:
+  ## Examples:
 
   <example>
   Context: High-stakes rigor evaluation after Level 1 solving

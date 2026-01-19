@@ -1,20 +1,18 @@
-***
-
+---
 name: questionably-ultrathink-skill
 description: |
-Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
+  Use this skill when facing complex problems requiring rigorous reasoning, systematic decomposition, or factual verification.
 
-Activation triggers:
+  Activation triggers:
 
-* "be thorough", "analyze carefully", "make sure this is right"
-* Complex multi-part questions
-* Architecture or security decisions
-* "verify", "double-check", "are you sure"
-* High-stakes technical decisions
-* Debugging complex issues
-  allowed-tools: \[Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Bash, Write]
-
-***
+  * "be thorough", "analyze carefully", "make sure this is right"
+  * Complex multi-part questions
+  * Architecture or security decisions
+  * "verify", "double-check", "are you sure"
+  * High-stakes technical decisions
+  * Debugging complex issues
+allowed-tools: [Task, Read, Grep, Glob, WebSearch, WebFetch, AskUserQuestion, Bash, Write]
+---
 
 # UltraThink Reasoning Framework
 
@@ -22,7 +20,7 @@ You orchestrate advanced reasoning through isolated, verified atomic solving.
 
 \<architecture\_overview>
 
-## Architecture: Isolated Solving with Question Contraction
+## Architecture: Isolated Solving with Factored Verification
 
 ### The Problem with Traditional Decomposition
 
@@ -31,25 +29,133 @@ Traditional approaches have a critical flaw: the same agent that generates quest
 ### The Solution: True Factored Execution
 
 1. **Graph Generator** creates ONLY the DAG of questions (no solving)
-2. **Atomic Solver** answers ONE question per spawn (complete isolation)
-3. **Graph Maintainer** rewrites dependent questions with solved answers (contraction)
-4. Each solver sees ONLY its contracted question - nothing else
+2. **Atomic Solver** answers ONE question per spawn, extracts claims, generates verification questions (but does NOT answer them)
+3. **Verifiers** answer verification questions in COMPLETE ISOLATION (no context about claims)
+4. **Verification Maintainer** cross-checks claims vs verifier answers, updates atom file
+5. **Graph Maintainer** rewrites dependent questions with solved answers (contraction)
 
-### Flow Diagram
+### Factored Verification Flow (Per Atom)
 
 ```
-SKILL → Graph Generator (DAG only, no solving)
-     ↓
-     For each level:
-         → Fresh Solver per atom (isolated, only sees question)
-         → Graph Maintainer (contracts dependent questions)
-     ↓
-     Repeat until FINAL solved
-     ↓
-     Synthesize response
+ORCHESTRATOR (you)
+    │
+    ├─(1)─► cov-atomic-solver
+    │           │
+    │           └──► writes atom file (answer + claims + verification Qs)
+    │
+    ├─(2)─► reads atom file, extracts verification Qs
+    │
+    ├─(3)─► cov-verifier #1 ──► returns: answer for Q1
+    ├─(3)─► cov-verifier #2 ──► returns: answer for Q2  (PARALLEL)
+    ├─(3)─► cov-verifier #N ──► returns: answer for QN
+    │
+    └─(4)─► cov-verification-maintainer
+                │  Input: atom path + all verifier responses
+                │
+                └──► updates atom file (verification trace + final answer)
 ```
+
+**Key Principle:** You (the orchestrator) control ALL agent spawning. Agents receive inputs and return outputs - they don't spawn other agents.
 
 \</architecture\_overview>
+
+\<background\_execution>
+
+## Background Execution for Pipeline Parallelism
+
+You can run subagents in the background to advance multiple independent paths simultaneously instead of waiting sequentially. This dramatically improves throughput when processing multiple atoms.
+
+### When to Use Background Execution
+
+Use `run_in_background: true` in Task tool calls when:
+
+* Multiple atoms at the same level need verification independently
+* Verification for one atom doesn't depend on another atom's verification
+* You want to start the next atom's pipeline while waiting on verifier responses
+
+### Pattern: Parallel Pipeline Advancement
+
+Instead of waiting for ALL verifiers to complete before moving to the next atom:
+
+```
+SEQUENTIAL (slow):
+A1: solver → verifiers → wait → maintainer → done
+A2: solver → verifiers → wait → maintainer → done
+```
+
+Use background execution for pipeline parallelism:
+
+```
+PARALLEL PIPELINE (fast):
+A1: solver → verifiers (background)
+A2: solver → verifiers (background)
+A1: check verifiers → maintainer (when ready)
+A2: check verifiers → maintainer (when ready)
+```
+
+### How to Use Background Execution
+
+**Step 1: Spawn verifiers in background**
+
+```
+Task tool:
+- subagent_type: "questionably-ultrathink:cov-verifier"
+- prompt: "{verification question}"
+- run_in_background: true
+```
+
+This returns immediately with an `output_file` path and task ID.
+
+**Step 2: Continue to next atom**
+
+While verifiers run in background, spawn the next atom's solver and verifiers.
+
+**Step 3: Check on background tasks**
+
+Use `TaskOutput` tool or `Read` the output file to check if background tasks completed:
+
+```
+TaskOutput tool:
+- task_id: "{task_id}"
+- block: false  # Non-blocking check
+```
+
+Or read the output file directly to see results.
+
+**Step 4: Process completed verification**
+
+Once an atom's verifiers complete, spawn its verification maintainer. You can do this while other atoms' verifiers are still running.
+
+### Example: Level 0 with A1 and A2
+
+```
+1. Spawn cov-atomic-solver for A1 and A2 (parallel, blocking)
+2. Write initial atom files with solver output
+
+3. Parse verification Qs from A1 → spawn N verifiers (run_in_background: true)
+4. Parse verification Qs from A2 → spawn N verifiers (run_in_background: true)
+
+5. Check A1 verifiers (TaskOutput, block: false)
+   - If complete → spawn A1's cov-verification-maintainer
+   - If not → continue
+
+6. Check A2 verifiers (TaskOutput, block: false)
+   - If complete → spawn A2's cov-verification-maintainer
+   - If not → continue
+
+7. Repeat checks until all maintainers have run
+8. Proceed to contract and next level
+```
+
+### Guidelines
+
+* **Solvers can run in parallel but should block** - You need their output immediately to parse verification questions
+* **Verifiers should run in background** - They're independent and you can advance other atoms while waiting
+* **Maintainers should block** - You need the updated atom file before contracting
+* **Track task IDs** - Keep a list of background task IDs so you can check on them
+* **Balance parallelism** - Don't spawn too many background tasks; group by atom for manageable tracking
+
+\</background\_execution>
 
 \<clarification\_first>
 
@@ -94,7 +200,7 @@ options:
 
 ## Available Agents
 
-**CRITICAL WARNING:** You are the orchestrator. NEVER invoke yourself.
+**CRITICAL WARNING:** You are the orchestrator. NEVER invoke yourself. Only YOU can spawn agents via the Task tool.
 
 ### aot-graph-generator
 
@@ -104,6 +210,36 @@ options:
 **Input:** Session ID, rigor level, clarified query
 **Output:** metadata.md + atom files with questions only (status: unsolved)
 
+### cov-atomic-solver
+
+**Purpose:** Answer ONE atomic question in complete isolation; extract claims and generate verification questions (but NOT answer them)
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-atomic-solver"`
+
+**Input:** The question text ONLY (extracted from atom file)
+**Output:** Answer + claims + verification questions (with VERIFICATION\_START/END markers)
+
+**CRITICAL:** Pass ONLY the question text to cov-atomic-solver. Do NOT pass session ID, atom ID, or any other context.
+
+### cov-verifier
+
+**Purpose:** Answer ONE verification question in complete isolation (no context about the claim being verified)
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-verifier"`
+
+**Input:** The verification question text ONLY (no claim, no original answer)
+**Output:** Answer + confidence + sources
+
+**CRITICAL:** Pass ONLY the verification question. The verifier must have ZERO context about what claim is being verified. This is the key to factored verification.
+
+### cov-verification-maintainer
+
+**Purpose:** Cross-check claims against independent verifier answers; update atom file with verification trace
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-verification-maintainer"`
+
+**Input:** Atom file path + verifier responses (claim, question, independent answer for each)
+**Output:** Updates atom file with full verification trace and revised answer
+
+**CRITICAL:** This agent does NOT spawn verifiers. You (the orchestrator) already spawned them and collected their responses. You pass those responses to this agent.
+
 ### aot-graph-maintainer
 
 **Purpose:** Contract unsolved atom questions with solved answers
@@ -111,16 +247,6 @@ options:
 
 **Input:** Session ID, list of solved atoms with answers
 **Output:** Rewrites dependent atom questions with "Given..." context
-
-### cov-atomic-solver
-
-**Purpose:** Answer ONE atomic question in complete isolation with self-verification
-**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-atomic-solver"`
-
-**Input:** The question text ONLY (extracted from atom file)
-**Output:** Verified answer with sources, verification trace, and confidence (numerical + categorical)
-
-**CRITICAL:** Pass ONLY the question text to cov-atomic-solver. Do NOT pass session ID, atom ID, or any other context.
 
 ### aot-judge (Optional - High-Stakes Only)
 
@@ -134,9 +260,7 @@ options:
 
 * Rigor level is High-Stakes
 * After solving all atoms at a level
-* When you want additional quality assurance beyond self-verification
-
-**Note:** The judge does NOT re-answer questions. It evaluates existing answers for quality issues.
+* When you want additional quality assurance beyond factored verification
 \</available\_agents>
 
 \<full\_pipeline>
@@ -183,7 +307,7 @@ Extract `solve_order` - the list of atoms grouped by level.
 
 \<phase\_2>
 
-### Phase 2: Iterative Solve Loop
+### Phase 2: Iterative Solve Loop with Factored Verification
 
 Process each level in order:
 
@@ -217,69 +341,148 @@ Task tool:
 
 **Invoke ALL atoms at the same level in parallel** (single message with multiple Task calls).
 
-**Step 2c: Extract answers and update atom files**
+**Step 2c: Extract solver output and write initial atom file**
 
-For each solved atom, YOU (the orchestrator) update the atom file:
+For each solved atom, extract from the solver's output:
 
-Read the solver's output and extract:
-
-* The initial answer (before verification)
-* The self-verification section (all claims and their verification status)
-* The final answer (after any revisions)
+* The answer
+* The claims + verification questions (between VERIFICATION\_START/END markers)
 * Sources
-* Confidence level (both numerical 0-1 and categorical)
+* Initial confidence
 
-Write the updated atom file with FULL verification trace:
+Write the initial atom file:
 
 ```markdown
 ---
 atom_id: {atom-id}
 level: {level}
 dependencies: [{deps}]
-status: solved
+status: pending_verification
 contracted: {true if was contracted}
-solved_at: {ISO timestamp when solving completed}
-solve_attempts: {number, starting at 1}
-parallel_group: [{list of atom IDs solved in same parallel batch}]
-confidence_score: {0.0-1.0 numerical score}
+solved_at: {ISO timestamp}
+solve_attempts: 1
+confidence_score: {initial confidence}
 ---
 
 # Question
 {the question}
 
-# Verification Trace
-
-## Initial Answer
-{The solver's first formulation before self-verification}
-
-## Self-Verification
-
-**Claim 1:** "{specific claim from initial answer}"
-- Verification Q: {independent question the solver asked}
-- Independent Answer: {answer without bias}
-- Status: ✓ VERIFIED | ⚠️ REVISED | ❓ UNCERTAIN
-
-**Claim 2:** ...
-{Include ALL claims the solver verified}
-
 # Answer
-{the final verified/revised answer}
+{the answer from solver}
+
+# Verification Questions
+<!-- VERIFICATION_START -->
+1. CLAIM: "{claim}" | QUESTION: "{verification question}"
+2. CLAIM: "{claim}" | QUESTION: "{verification question}"
+<!-- VERIFICATION_END -->
 
 # Sources
-- {source 1}
-- {source 2}
+{sources}
 
 # Confidence
-{0.XX} ({HIGH | MEDIUM | LOW}) - {explanation}
+{initial confidence}
 ```
 
-**IMPORTANT:** Preserve the FULL verification trace from the solver's output. This provides:
+**Step 2d: Parse verification questions**
 
-* Audit trail for how answers were derived
-* Ability to diagnose LOW confidence atoms
-* Evidence for re-solve decisions
+Extract claims and questions from between the VERIFICATION\_START/END markers:
 
-**Step 2d: Contract dependent atoms**
+```
+Pattern: CLAIM: "{claim}" | QUESTION: "{question}"
+```
+
+Build a list of (claim, question) pairs.
+
+**Step 2e: Spawn ISOLATED verifiers for each verification question (PARALLEL or BACKGROUND)**
+
+For each (claim, question) pair, spawn a fresh verifier with ONLY the question:
+
+```
+Task tool:
+- subagent_type: "questionably-ultrathink:cov-verifier"
+- prompt: "{the verification question text only, nothing else}"
+- run_in_background: true  # Optional: enables pipeline parallelism
+```
+
+**CRITICAL:**
+
+* Pass ONLY the verification question
+* NO claim text, NO original answer, NO context
+* The verifier must have ZERO knowledge of what's being verified
+* This is what makes it "factored" verification
+
+**Parallelization options:**
+
+1. **Parallel within atom (blocking):** Invoke ALL verifiers for one atom in parallel (single message with multiple Task calls). Wait for completion before moving to next atom.
+
+2. **Background for pipeline parallelism (recommended):** Spawn verifiers with `run_in_background: true`. This lets you immediately start the next atom's verification while the first atom's verifiers run. Check on background tasks with `TaskOutput` (block: false) and spawn maintainers as each atom's verifiers complete. See `<background_execution>` section for details.
+
+**Step 2f: Collect verifier responses**
+
+**For blocking calls:** Extract directly from Task tool responses.
+
+**For background calls:** Use `TaskOutput` tool to retrieve results:
+
+```
+TaskOutput tool:
+- task_id: "{task_id from background spawn}"
+- block: true   # Wait for completion
+- timeout: 30000  # 30 second timeout
+```
+
+Or use `block: false` to check without waiting (for pipeline advancement).
+
+For each verifier response, extract:
+
+* ANSWER: {the independent answer}
+* CONFIDENCE: {HIGH | MEDIUM | LOW}
+* SOURCES: {sources used}
+
+Build a structured list:
+
+```
+VERIFIER RESPONSES:
+1. CLAIM: "{original claim from solver}"
+   QUESTION: "{the verification question}"
+   INDEPENDENT ANSWER: "{answer from verifier}"
+   CONFIDENCE: {verifier's confidence}
+   SOURCES: {verifier's sources}
+
+2. CLAIM: ...
+```
+
+**With background execution:** Collect responses for each atom as its verifiers complete. You don't need to wait for all atoms' verifiers before processing the first atom's maintainer.
+
+**Step 2g: Spawn verification maintainer to cross-check and update atom file**
+
+```
+Task tool:
+- subagent_type: "questionably-ultrathink:cov-verification-maintainer"
+- prompt: |
+    Atom file path: .questionably-ultrathink/{session-id}/atoms/{atom-id}.md
+
+    VERIFIER RESPONSES:
+    1. CLAIM: "{claim}"
+       QUESTION: "{question}"
+       INDEPENDENT ANSWER: "{verifier answer}"
+       CONFIDENCE: {confidence}
+       SOURCES: {sources}
+
+    2. CLAIM: ...
+
+    Cross-check each claim against its independent verification answer. Update the atom file with the full verification trace.
+```
+
+The maintainer will:
+
+* Read the atom file
+* Compare each claim to its verification answer
+* Mark claims as VERIFIED, REVISED, REFUTED, or UNCERTAIN
+* Update the answer if any claims were revised/refuted
+* Write the full verification trace to the atom file
+* Update the confidence score
+
+**Step 2h: Contract dependent atoms**
 
 If there are more levels to process, invoke the graph maintainer:
 
@@ -293,9 +496,9 @@ Task tool:
 
 This rewrites next-level atom questions with the solved answers as "Given..." context.
 
-**Step 2e: Continue to next level**
+**Step 2i: Continue to next level**
 
-Repeat 2a-2d for each level until FINAL is solved.
+Repeat 2a-2h for each level until FINAL is solved.
 \</phase\_2>
 
 \<phase\_3>
@@ -332,12 +535,12 @@ After completing all levels, check confidence based on rigor:
 **Status Lifecycle:**
 
 ```
-unsolved → in_progress → solved → (needs_re_solve → in_progress → solved) → verified
+unsolved → pending_verification → solved → (needs_re_solve → pending_verification → solved) → verified
 ```
 
 1. `unsolved` - Initial state from graph generator
-2. `in_progress` - Currently being solved (mark BEFORE spawning solver)
-3. `solved` - Solver completed (mark after extracting answer)
+2. `pending_verification` - Solver completed, awaiting factored verification
+3. `solved` - Verification maintainer completed
 4. `needs_re_solve` - Confidence below threshold for rigor level
 5. `verified` - Passed rigor check (final state)
 
@@ -346,7 +549,7 @@ unsolved → in_progress → solved → (needs_re_solve → in_progress → solv
 1. Mark atoms needing re-solve with `status: needs_re_solve`
 2. Increment `solve_attempts` counter
 3. For each, spawn a fresh solver with the same question
-4. Update atom files with new answers (preserve previous attempt in trace)
+4. Run the full factored verification pipeline again
 5. If dependencies changed, re-contract and re-solve dependents
 
 **Early Stop Conditions:**
@@ -394,21 +597,32 @@ Level 1: A3 ← [A1, A2]
 Level 2: FINAL ← [A3]
 ```
 
-### Phase 2: Iterative Solving
+### Phase 2: Iterative Solving with Factored Verification
 
 **Level 0** (parallel):
-- [A1] {question} → {answer} (confidence: HIGH)
-- [A2] {question} → {answer} (confidence: MEDIUM)
+- [A1] {question}
+  - Initial answer: {answer}
+  - Verification: {N claims verified, M revised}
+  - Final confidence: HIGH
+
+- [A2] {question}
+  - Initial answer: {answer}
+  - Verification: {N claims verified}
+  - Final confidence: MEDIUM
 
 *Contracting A3 with A1, A2 answers...*
 
 **Level 1**:
-- [A3] "Given {A1}, {A2}, {question}?" → {answer} (confidence: HIGH)
+- [A3] "Given {A1}, {A2}, {question}?"
+  - Initial answer: {answer}
+  - Verification: {N claims verified}
+  - Final confidence: HIGH
 
 *Contracting FINAL with A3 answer...*
 
 **Level 2**:
-- [FINAL] "Given {A3}, {synthesis question}?" → {answer}
+- [FINAL] "Given {A3}, {synthesis question}?"
+  - Final answer: {answer}
 
 ### Phase 3: Synthesis
 
@@ -420,12 +634,12 @@ Level 2: FINAL ← [A3]
 
 ### Confidence Assessment
 
-| Atom | Confidence | Notes |
-|------|------------|-------|
-| A1 | HIGH | {notes} |
-| A2 | MEDIUM | {notes} |
-| A3 | HIGH | {notes} |
-| FINAL | HIGH | {notes} |
+| Atom | Initial | After Verification | Notes |
+|------|---------|-------------------|-------|
+| A1 | 0.75 | 0.90 | All claims verified |
+| A2 | 0.60 | 0.55 | 1 claim revised |
+| A3 | 0.80 | 0.85 | All claims verified |
+| FINAL | 0.85 | 0.85 | All claims verified |
 
 **Overall Confidence:** {HIGH | MEDIUM | LOW}
 
@@ -466,10 +680,10 @@ Skip UltraThink for:
 
 After using UltraThink, mark your confidence:
 
-* **\[VERIFIED]** - All atoms passed self-verification
-* **\[HIGH CONFIDENCE]** - Most atoms HIGH, no LOW
+* **\[VERIFIED]** - All atoms passed factored verification, all claims verified
+* **\[HIGH CONFIDENCE]** - Most atoms HIGH, no LOW, minor revisions only
 * **\[NEEDS EXTERNAL VERIFICATION]** - User should confirm externally
-* **\[UNCERTAIN]** - Significant LOW confidence atoms remain
+* **\[UNCERTAIN]** - Significant LOW confidence atoms or many revised claims
   \</confidence\_markers>
 
 You must execute the questionably-ultrathink workflow.
