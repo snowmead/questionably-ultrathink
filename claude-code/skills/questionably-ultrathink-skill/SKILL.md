@@ -29,19 +29,19 @@ Traditional approaches have a critical flaw: the same agent that generates quest
 ### The Solution: True Factored Execution
 
 1. **Graph Generator** creates ONLY the DAG of questions (no solving)
-2. **Claim Generator (cov-claim-qs)** generates claims and verification questions (NO fact-checking)
+2. **Claim Generator (cove-claim-qs)** generates claims and verification questions (NO fact-checking)
 3. **Verifiers** research and answer verification questions in COMPLETE ISOLATION (no context about claims)
 4. **Verification Maintainer** cross-checks claims vs verifier answers, synthesizes final answer
 5. **Graph Maintainer** rewrites dependent questions with solved answers (contraction)
 
-**Key insight:** Only cov-verifier does actual research/fact-checking. All other agents either generate structure or process verified facts.
+**Key insight:** Only cove-verifier does actual research/fact-checking. All other agents either generate structure or process verified facts.
 
 ### Factored Verification Flow (Per Atom)
 
 ```
 ORCHESTRATOR (you)
     │
-    ├─(1)─► cov-claim-qs
+    ├─(1)─► cove-claim-qs
     │           │  Input: ATOM_DIR
     │           └──► reads question.md
     │               writes claims.md
@@ -50,13 +50,13 @@ ORCHESTRATOR (you)
     │
     ├─(2)─► reads claims.md frontmatter to get claim_count
     │
-    ├─(3)─► cov-verifier #1 ──► reads/overwrites verifiers/1.md, returns "VERIFIER_DONE"
-    ├─(3)─► cov-verifier #2 ──► reads/overwrites verifiers/2.md, returns "VERIFIER_DONE" (PARALLEL)
-    ├─(3)─► cov-verifier #N ──► reads/overwrites verifiers/N.md, returns "VERIFIER_DONE"
+    ├─(3)─► cove-verifier #1 ──► reads/overwrites verifiers/1.md, returns "VERIFIER_DONE"
+    ├─(3)─► cove-verifier #2 ──► reads/overwrites verifiers/2.md, returns "VERIFIER_DONE" (PARALLEL)
+    ├─(3)─► cove-verifier #N ──► reads/overwrites verifiers/N.md, returns "VERIFIER_DONE"
     │           │  Input: VERIFIER_FILE (pre-created with ONLY the question)
     │           └──► Verifier has ZERO context about the claim
     │
-    └─(4)─► cov-verification-maintainer
+    └─(4)─► cove-verification-maintainer
                 │  Input: ATOM_DIR only
                 │  (reads claims.md + verifiers/*.md itself)
                 │
@@ -67,7 +67,7 @@ ORCHESTRATOR (you)
 - State is determined by FILE EXISTENCE and CONTENT
 - `question.md` exists → atom created
 - `claims.md` exists → claims generated
-- `verifiers/{N}.md` exists with question only → pre-created by cov-claim-qs, ready for verifier
+- `verifiers/{N}.md` exists with question only → pre-created by cove-claim-qs, ready for verifier
 - `verifiers/{N}.md` has "# Answer" section → verification question answered
 - `answer.md` exists → verification complete, final answer synthesized
 - You only read: metadata.md (DAG structure), claims.md frontmatter (claim_count), FINAL/answer.md (at end)
@@ -115,7 +115,7 @@ A2: check verifier files → maintainer (when ready)
 
 ```
 Task tool:
-- subagent_type: "questionably-ultrathink:cov-verifier"
+- subagent_type: "questionably-ultrathink:cove-verifier"
 - prompt: |
     VERIFIER_FILE: .questionably-ultrathink/{session-id}/atoms/{atom-id}/verifiers/{N}.md
 - run_in_background: true
@@ -150,18 +150,18 @@ Once an atom's verifiers are all complete (all verifier files have "# Answer" se
 ### Example: Level 0 with A1 and A2
 
 ```
-1. Spawn cov-claim-qs for A1 and A2 (parallel, blocking)
+1. Spawn cove-claim-qs for A1 and A2 (parallel, blocking)
    - This creates claims.md AND verifiers/{N}.md files (with just questions)
 
 2. Read claims.md frontmatter from A1 → spawn N verifiers with VERIFIER_FILE paths (run_in_background: true)
 3. Read claims.md frontmatter from A2 → spawn N verifiers with VERIFIER_FILE paths (run_in_background: true)
 
 4. Check A1 verifiers (Grep for "# Answer" in verifier files)
-   - If all complete → spawn A1's cov-verification-maintainer
+   - If all complete → spawn A1's cove-verification-maintainer
    - If not → continue
 
 5. Check A2 verifiers (Grep for "# Answer" in verifier files)
-   - If all complete → spawn A2's cov-verification-maintainer
+   - If all complete → spawn A2's cove-verification-maintainer
    - If not → continue
 
 6. Repeat checks until all maintainers have run (all atoms have answer.md)
@@ -231,10 +231,10 @@ options:
 **Input:** Session ID, rigor level, clarified query
 **Output:** Creates `metadata.md` + `atoms/{id}/question.md` for each atom
 
-### cov-claim-qs
+### cove-claim-qs
 
 **Purpose:** Generate claims, verification questions, AND pre-create verifier files for ONE atomic question (NO fact-checking)
-**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-claim-qs"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cove-claim-qs"`
 
 **Input:** `ATOM_DIR` path (reads `question.md` itself)
 **Output:** Creates `claims.md` AND `verifiers/{N}.md` files in atom directory, returns `CLAIMS_GENERATED: {atom-id}`
@@ -245,20 +245,20 @@ options:
 
 The verifier files contain ONLY the verification question (no claim text). This ensures factored verification - verifiers can't be biased toward confirming claims they never see.
 
-### cov-verifier
+### cove-verifier
 
 **Purpose:** Research and answer ONE verification question in complete isolation (no context about the claim being verified)
-**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-verifier"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cove-verifier"`
 
 **Input:** `VERIFIER_FILE` path (the pre-created file containing ONLY the verification question)
 **Output:** Overwrites `VERIFIER_FILE` with question + answer + confidence + sources, returns `VERIFIER_DONE`
 
 **CRITICAL:** The verifier reads ONLY its pre-created file which contains ONLY the verification question. It has ZERO knowledge of the claim text. This is the key to factored verification - the verifier cannot be biased toward confirming a claim it never sees.
 
-### cov-verification-maintainer
+### cove-verification-maintainer
 
 **Purpose:** Cross-check claims against independent verifier answers; synthesize final answer
-**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-verification-maintainer"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cove-verification-maintainer"`
 
 **Input:** `ATOM_DIR` only (reads `claims.md` and `verifiers/*.md` itself)
 **Output:** Creates `answer.md` in atom directory, returns `VERIFICATION_COMPLETE: {atom-id}`
@@ -365,13 +365,13 @@ Glob: .questionably-ultrathink/{session-id}/atoms/{atom-id}/answer.md
 
 This determines where each atom is in the pipeline.
 
-**Step 2b: Spawn cov-claim-qs for atoms missing claims.md (PARALLEL)**
+**Step 2b: Spawn cove-claim-qs for atoms missing claims.md (PARALLEL)**
 
 For atoms where `claims.md` does NOT exist, spawn the claim generator:
 
 ```
 Task tool:
-- subagent_type: "questionably-ultrathink:cov-claim-qs"
+- subagent_type: "questionably-ultrathink:cove-claim-qs"
 - prompt: |
     ATOM_DIR: .questionably-ultrathink/{session-id}/atoms/{atom-id}
 ```
@@ -382,7 +382,7 @@ Task tool:
 
 * The agent reads `question.md` and writes `claims.md` itself
 * It generates claims and verification questions only
-* It does NOT research or fact-check (cov-verifier does that)
+* It does NOT research or fact-check (cove-verifier does that)
 
 **Invoke ALL atoms at the same level in parallel** (single message with multiple Task calls).
 
@@ -398,7 +398,7 @@ Extract `claim_count` from frontmatter - this tells you how many verifiers to sp
 
 **Step 2d: Check which verifiers are complete and spawn for incomplete ones (PARALLEL or BACKGROUND)**
 
-The verifier files were pre-created by cov-claim-qs with ONLY the verification question. Check which have been completed (have an Answer section):
+The verifier files were pre-created by cove-claim-qs with ONLY the verification question. Check which have been completed (have an Answer section):
 
 ```
 Grep: "# Answer" in .questionably-ultrathink/{session-id}/atoms/{atom-id}/verifiers/*.md
@@ -410,7 +410,7 @@ For each INCOMPLETE verifier file (1 to claim_count), spawn a fresh verifier:
 
 ```
 Task tool:
-- subagent_type: "questionably-ultrathink:cov-verifier"
+- subagent_type: "questionably-ultrathink:cove-verifier"
 - prompt: |
     VERIFIER_FILE: .questionably-ultrathink/{session-id}/atoms/{atom-id}/verifiers/{N}.md
 - run_in_background: true  # Optional: enables pipeline parallelism
@@ -420,7 +420,7 @@ Task tool:
 
 **CRITICAL:**
 
-* The verifier file was pre-created by cov-claim-qs with ONLY the verification question
+* The verifier file was pre-created by cove-claim-qs with ONLY the verification question
 * The verifier reads this file and has ZERO context about the claim being verified
 * It overwrites the file with question + answer + confidence + sources
 * This is what makes it "factored" verification - complete isolation
@@ -454,7 +454,7 @@ When all verifier files have been completed (all have "# Answer" sections), spaw
 
 ```
 Task tool:
-- subagent_type: "questionably-ultrathink:cov-verification-maintainer"
+- subagent_type: "questionably-ultrathink:cove-verification-maintainer"
 - prompt: |
     ATOM_DIR: .questionably-ultrathink/{session-id}/atoms/{atom-id}
 ```
@@ -537,7 +537,7 @@ Read: .questionably-ultrathink/{session-id}/atoms/{atom-id}/answer.md
 **If re-solving needed:**
 
 1. Delete the `claims.md` and `answer.md` files (and `verifiers/` directory) for atoms needing re-solve
-2. Spawn a fresh cov-claim-qs to regenerate claims
+2. Spawn a fresh cove-claim-qs to regenerate claims
 3. Run the full factored verification pipeline again
 4. If dependencies changed, re-contract and re-solve dependents
 

@@ -15,7 +15,7 @@ description: |
   user: "Help me build an authentication system with OAuth and rate limiting"
   assistant: "Let me build the question graph using the aot-graph-generator agent."
   </example>
-model: haiku
+model: opus
 tools: [Read, Write, AskUserQuestion]
 ---
 
@@ -224,7 +224,7 @@ dependencies: [{list of dependency atom IDs, or empty}]
 
 **State is determined by file existence:**
 - `question.md` exists → atom created (by you)
-- `claims.md` exists → claims generated (by cov-claim-qs)
+- `claims.md` exists → claims generated (by cove-claim-qs)
 - `answer.md` exists → verification complete (by verification-maintainer)
   \</file\_formats>
 

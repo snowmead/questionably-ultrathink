@@ -21,10 +21,10 @@ Verify a factual claim or answer a question with built-in self-verification.
    - If already a question, use as-is
    - Ensure the question is self-contained and atomic
 
-3. **Invoke the cov-atomic-solver agent:**
+3. **Invoke the cove-atomic-solver agent:**
 
        Task tool:
-       - subagent_type: "questionably-ultrathink:cov-atomic-solver"
+       - subagent_type: "questionably-ultrathink:cove-atomic-solver"
        - prompt: "{the question or claim to verify}"
 
    **IMPORTANT:** Pass ONLY the question/claim text. No additional context.

@@ -1,5 +1,5 @@
 ---
-name: cov-verification-maintainer
+name: cove-verification-maintainer
 description: |
   Use this agent to cross-check claims against independent verification answers and create the final answer.
   This agent reads claims.md and verifiers/*.md from the atom directory.
@@ -9,7 +9,7 @@ description: |
 
   <example>
   Context: After verifiers have written their responses to files
-  assistant: "I'll spawn cov-verification-maintainer with the atom directory to cross-check claims."
+  assistant: "I'll spawn cove-verification-maintainer with the atom directory to cross-check claims."
   </example>
   <example>
   Context: Completing factored verification for an atom

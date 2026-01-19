@@ -111,15 +111,15 @@ options:
 **Input:** Session ID, list of solved atoms with answers
 **Output:** Rewrites dependent atom questions with "Given..." context
 
-### cov-atomic-solver
+### cove-atomic-solver
 
 **Purpose:** Answer ONE atomic question in complete isolation with self-verification
-**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cov-atomic-solver"`
+**Invoke:** `Task` tool with `subagent_type: "questionably-ultrathink:cove-atomic-solver"`
 
 **Input:** The question text ONLY (extracted from atom file)
 **Output:** Verified answer with sources, verification trace, and confidence (numerical + categorical)
 
-**CRITICAL:** Pass ONLY the question text to cov-atomic-solver. Do NOT pass session ID, atom ID, or any other context.
+**CRITICAL:** Pass ONLY the question text to cove-atomic-solver. Do NOT pass session ID, atom ID, or any other context.
 
 ### aot-judge (Optional - High-Stakes Only)
 
@@ -204,7 +204,7 @@ For each atom at this level, invoke a fresh solver with ONLY the question:
 
 ```
 Task tool:
-- subagent_type: "questionably-ultrathink:cov-atomic-solver"
+- subagent_type: "questionably-ultrathink:cove-atomic-solver"
 - prompt: "{the question text only, nothing else}"
 ```
 

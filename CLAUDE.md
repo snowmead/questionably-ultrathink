@@ -53,13 +53,13 @@ questionably-ultrathink/
 | Agent | Purpose | Tools |
 |-------|---------|-------|
 | `aot-graph-generator` | Builds question DAG (no solving) | Read, Write, AskUserQuestion |
-| `cov-claim-qs` | Generates claims + verification Qs + pre-creates verifier files (NO fact-checking) | Read, Write |
-| `cov-verifier` | Researches ONE verification Q with zero context (reads pre-created verifier file) | Read, Write, WebSearch, WebFetch, mcp__parallel-search__* |
-| `cov-verification-maintainer` | Cross-checks claims, synthesizes final answer | Read, Write, Edit |
+| `cove-claim-qs` | Generates claims + verification Qs + pre-creates verifier files (NO fact-checking) | Read, Write |
+| `cove-verifier` | Researches ONE verification Q with zero context (reads pre-created verifier file) | Read, Write, WebSearch, WebFetch, mcp__parallel-search__* |
+| `cove-verification-maintainer` | Cross-checks claims, synthesizes final answer | Read, Write, Edit |
 | `aot-graph-maintainer` | Contracts solved answers INTO dependent questions | Read, Write, Bash |
 | `aot-judge` | Evaluates quality across atoms (High-Stakes only) | Read |
 
-**Key insight:** Only `cov-verifier` does actual research/fact-checking.
+**Key insight:** Only `cove-verifier` does actual research/fact-checking.
 
 ## Core Design: Factored Verification
 
@@ -68,7 +68,7 @@ The key innovation is **complete isolation** at every step:
 ```
 Graph Generator → creates DAG only (no solving)
         ↓
-Claim Generator (cov-claim-qs) → generates claims + verification Qs (NO research)
+Claim Generator (cove-claim-qs) → generates claims + verification Qs (NO research)
         │                        pre-creates verifiers/{N}.md with ONLY the question
         ↓
 Verifiers → read pre-created file, research answer with ZERO context about claims
@@ -92,11 +92,11 @@ Agents communicate via files in `.questionably-ultrathink/{session-id}/`. Each a
 └── atoms/
     ├── A1/
     │   ├── question.md      # Written by: graph-generator
-    │   ├── claims.md        # Written by: cov-claim-qs
+    │   ├── claims.md        # Written by: cove-claim-qs
     │   ├── answer.md        # Written by: verification-maintainer
     │   └── verifiers/
-    │       ├── 1.md         # Pre-created by: cov-claim-qs (question only)
-    │       │                # Completed by: cov-verifier (adds answer)
+    │       ├── 1.md         # Pre-created by: cove-claim-qs (question only)
+    │       │                # Completed by: cove-verifier (adds answer)
     │       └── 2.md
     ├── A2/
     │   └── ...
@@ -106,12 +106,12 @@ Agents communicate via files in `.questionably-ultrathink/{session-id}/`. Each a
 
 **State = File Existence + Content:**
 - `question.md` exists → atom created (by graph-generator)
-- `claims.md` exists → claims generated (by cov-claim-qs)
+- `claims.md` exists → claims generated (by cove-claim-qs)
 - `verifiers/{N}.md` exists with question only → pre-created, ready for verifier
 - `verifiers/{N}.md` has "# Answer" section → verification question answered
 - `answer.md` exists → verification complete (by verification-maintainer)
 
-**No concurrent writes:** Each file written by exactly one agent (verifier files: pre-created by cov-claim-qs, then overwritten by cov-verifier).
+**No concurrent writes:** Each file written by exactly one agent (verifier files: pre-created by cove-claim-qs, then overwritten by cove-verifier).
 
 **answer.md structure after verification:**
 ```markdown

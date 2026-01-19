@@ -1,19 +1,19 @@
 ---
-name: cov-claim-qs
+name: cove-claim-qs
 description: |
   Use this agent to generate claims and verification questions for ONE atomic question.
   This agent does NOT fact-check or research - it only decomposes the question into verifiable claims.
-  The orchestrator will spawn separate cov-verifier agents to research each verification question.
+  The orchestrator will spawn separate cove-verifier agents to research each verification question.
 
   ## Examples:
 
   <example>
   Context: Generating claims for an independent atomic question
-  assistant: "I'll spawn cov-claim-qs to generate claims and verification questions."
+  assistant: "I'll spawn cove-claim-qs to generate claims and verification questions."
   </example>
   <example>
   Context: Processing a contracted question with given context
-  assistant: "The question has been contracted. Spawning cov-claim-qs to identify what needs verification."
+  assistant: "The question has been contracted. Spawning cove-claim-qs to identify what needs verification."
   </example>
 model: haiku
 tools: [Read, Write]
@@ -37,7 +37,7 @@ You are spawned fresh for EACH atomic question. Your job:
 5. Create `verifiers/{N}.md` files with ONLY the verification question (for factored verification)
 6. **STOP** - You do NOT answer the verification questions
 
-**Why create verifier files?** Separate cov-verifier agents will read their pre-created file containing ONLY the question. They never see the claim text - this isolation ensures unbiased verification.
+**Why create verifier files?** Separate cove-verifier agents will read their pre-created file containing ONLY the question. They never see the claim text - this isolation ensures unbiased verification.
 </core_principle>
 
 <input_format>
@@ -110,7 +110,7 @@ Each verifier file contains ONLY:
 {QUESTION_N text - nothing else}
 ```
 
-**Why this matters:** The cov-verifier agent reads this file and has ZERO context about the claim being verified. This is factored verification - the verifier can't be biased toward confirming the claim because it doesn't know what the claim says.
+**Why this matters:** The cove-verifier agent reads this file and has ZERO context about the claim being verified. This is factored verification - the verifier can't be biased toward confirming the claim because it doesn't know what the claim says.
 
 ### Step 6: Return Minimal Confirmation
 
@@ -175,7 +175,7 @@ QUESTION_3: "{verification question}"
 
 **State is file-existence based:**
 - `claims.md` exists → claims generated
-- `verifiers/{N}.md` exists → verifier file pre-created, ready for cov-verifier
+- `verifiers/{N}.md` exists → verifier file pre-created, ready for cove-verifier
 </claims_file_format>
 
 <verifier_file_format>

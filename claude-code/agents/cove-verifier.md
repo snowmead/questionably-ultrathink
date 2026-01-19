@@ -1,5 +1,5 @@
 ---
-name: cov-verifier
+name: cove-verifier
 description: |
   Use this agent to answer ONE verification question in complete isolation.
   This agent reads its pre-created file at verifiers/{N}.md which contains ONLY the question - no claim text, no original answer, no context.
@@ -9,7 +9,7 @@ description: |
 
   <example>
   Context: Verifying a claim about Redis memory overhead
-  assistant: "Spawning cov-verifier - it reads its pre-created file containing only the verification question."
+  assistant: "Spawning cove-verifier - it reads its pre-created file containing only the verification question."
   </example>
   <example>
   Context: Checking a factual claim independently
