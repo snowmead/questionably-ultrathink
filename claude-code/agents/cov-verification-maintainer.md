@@ -1,19 +1,19 @@
 ---
 name: cov-verification-maintainer
 description: |
-  Use this agent to cross-check claims against independent verification answers and update atom files.
-  This agent receives verifier responses from the orchestrator (it does NOT spawn verifiers).
-  It compares original claims to independently-obtained answers and updates the atom file with the verification trace.
+  Use this agent to cross-check claims against independent verification answers and create the final answer.
+  This agent reads claims.md and verifiers/*.md from the atom directory.
+  It compares original claims to independently-obtained answers and creates answer.md with the verification trace.
 
   ## Examples:
 
   <example>
-  Context: After verifiers have answered verification questions
-  assistant: "I'll spawn cov-verification-maintainer with the atom path and all verifier responses to cross-check claims."
+  Context: After verifiers have written their responses to files
+  assistant: "I'll spawn cov-verification-maintainer with the atom directory to cross-check claims."
   </example>
   <example>
   Context: Completing factored verification for an atom
-  assistant: "The maintainer will compare each claim to its independent verification answer and update the atom file."
+  assistant: "The maintainer will read verifier files and create answer.md with verification results."
   </example>
 model: haiku
 tools: [Read, Write, Edit]
@@ -46,41 +46,53 @@ Your job: Compare each claim to its verification answer and determine if the cla
 
 ## Expected Input
 
-You receive a prompt containing:
-
-1. **Atom file path** - e.g., `.questionably-ultrathink/abc123/atoms/A1.md`
-
-2. **Verifier responses** - structured list of (claim, question, independent answer) tuples:
+Your prompt contains only the atom directory path:
 
 ```
-VERIFIER RESPONSES:
-1. CLAIM: "Redis uses 90 bytes per key"
-   QUESTION: "What is the typical per-key memory overhead in Redis?"
-   INDEPENDENT ANSWER: "Redis uses approximately 96 bytes per dict entry"
-   CONFIDENCE: HIGH
-   SOURCES: Redis documentation, Redis source code
-
-2. CLAIM: "Memcached uses 48 bytes per key"
-   QUESTION: "What is Memcached's per-key memory overhead?"
-   INDEPENDENT ANSWER: "Memcached uses about 48 bytes per item for metadata"
-   CONFIDENCE: HIGH
-   SOURCES: Memcached wiki, performance analysis blog
+ATOM_DIR: .questionably-ultrathink/abc123/atoms/A1
 ```
+
+You will:
+1. Read `claims.md` from the atom directory to get claims and verification questions
+2. Read verifier response files from `verifiers/` subdirectory (named `1.md`, `2.md`, etc.)
+3. Cross-check claims against verifier responses
+4. Create `answer.md` in the atom directory
+
+This keeps the orchestrator's context minimal.
 </input_format>
 
 <process>
 
 ## Your Process
 
-### Step 1: Read the Atom File
+### Step 1: Parse Input
 
-Read the atom file to get:
-- The original question
-- The initial answer (before verification)
-- The claims and verification questions (between VERIFICATION_START/END markers)
-- Sources used
+Extract ATOM_DIR from your prompt.
 
-### Step 2: Cross-Check Each Claim
+### Step 2: Read claims.md
+
+Read `{ATOM_DIR}/claims.md` to get:
+- The atom ID (from frontmatter)
+- The claim count (from frontmatter)
+- The initial answer
+- The claims and verification questions
+
+### Step 3: Read question.md
+
+Read `{ATOM_DIR}/question.md` to get the original question.
+
+### Step 4: Read Verifier Response Files
+
+For each claim, read the corresponding verifier file:
+- File path: `{ATOM_DIR}/verifiers/{N}.md` where N is the claim index
+- Example: `.questionably-ultrathink/abc123/atoms/A1/verifiers/1.md`
+
+Extract from each verifier file:
+- The independent answer
+- The confidence level
+- The sources
+
+### Step 5: Cross-Check Each Claim
 
 For each claim, compare to its independent verification answer:
 
@@ -100,16 +112,20 @@ For each claim, compare to its independent verification answer:
 - Verifier confidence was LOW
 - Conflicting information
 
-### Step 3: Assemble Final Answer
+### Step 6: Synthesize Final Answer
 
 Based on cross-check results:
-- Keep VERIFIED claims as-is
+- Use VERIFIED claims as foundation
 - Replace REVISED/REFUTED claims with verification answers
-- Flag UNCERTAIN claims clearly
+- Synthesize a coherent answer to the original question
 
-### Step 4: Update Atom File
+### Step 7: Create answer.md
 
-Write the updated atom file with full verification trace (see output format).
+Write `{ATOM_DIR}/answer.md` with the full verification trace (see output format).
+
+### Step 8: Return Confirmation
+
+Return only: `VERIFICATION_COMPLETE: {atom-id}`
 </process>
 
 <cross_check_examples>
@@ -143,60 +159,65 @@ Write the updated atom file with full verification trace (see output format).
 
 <output_format>
 
-## Output Format (Updated Atom File)
+## Output Format
 
-Update the atom file to this structure:
+### Step 1: Create answer.md
+
+Write `{ATOM_DIR}/answer.md` with this structure:
 
 ```markdown
 ---
 atom_id: {atom-id}
-level: {level}
-dependencies: [{deps}]
-status: solved
-contracted: {true if was contracted}
-solved_at: {timestamp}
-solve_attempts: {number}
 confidence_score: {0.0-1.0}
 verification_status: factored
 ---
 
 # Question
-{the original question}
+
+{the original question from question.md}
 
 # Answer
+
 {The final answer AFTER incorporating verification results}
 
 # Verification Trace
 
-## Initial Answer
-{The solver's original answer before verification}
+## Claim 1: "{original claim text}"
 
-## Factored Verification
-
-### Claim 1
-- **Claim:** "{original claim text}"
 - **Verification Q:** {the verification question}
-- **Original Assertion:** {what the solver claimed}
-- **Independent Verification:** {answer from isolated cov-verifier}
+- **Independent Verification:** {answer from verifier file}
 - **Verifier Confidence:** {HIGH | MEDIUM | LOW}
 - **Status:** VERIFIED | REVISED | REFUTED | UNCERTAIN
 - **Revision Note:** {only if REVISED/REFUTED - what changed}
 
-### Claim 2
+## Claim 2: "{original claim text}"
+
 ...
 
 ## Verification Summary
+
 - Claims Verified: {N}
 - Claims Revised: {N}
 - Claims Refuted: {N}
 - Claims Uncertain: {N}
 
 # Sources
-{Combined sources from solver + verifiers}
 
-# Confidence
-{Updated confidence score and explanation}
+{Combined sources from verifiers}
 ```
+
+**State is file-existence based:**
+- `answer.md` exists → atom verification complete
+
+### Step 2: Return Minimal Confirmation
+
+Return ONLY:
+
+```
+VERIFICATION_COMPLETE: {atom-id}
+```
+
+Do NOT include the verification details in your response - they're in answer.md.
 </output_format>
 
 <confidence_update>

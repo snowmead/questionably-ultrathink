@@ -15,182 +15,147 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 python3 scripts/check-frontmatter.py claude-code/**/*.md skills/**/*.md
 ```
 
+Pre-commit hooks run automatically via lefthook:
+- `format-markdown`: Formats non-plugin markdown with comrak
+- `validate-plugin`: Runs `claude plugin validate .`
+
 ## Overview
 
-This is a Claude Code plugin that integrates two research-backed reasoning frameworks:
-- **Atom of Thoughts (AoT)** - Decomposes complex problems into atomic sub-questions organized as a DAG
-- **Chain of Verification (CoVe)** - Verifies factual claims through independent questioning to reduce hallucinations
+Claude Code plugin integrating two research-backed reasoning frameworks:
+- **Atom of Thoughts (AoT)** - Decomposes problems into atomic sub-questions as a DAG
+- **Chain of Verification (CoVe)** - Verifies claims through factored execution (isolated verifiers with zero context)
 
-## Installation
-
-**Claude Code:**
-```bash
-/plugin marketplace add snowmead/questionably-ultrathink
-/plugin install questionably-ultrathink@snowmead-marketplace
-```
-
-**Other Agents (OpenCode, Cursor, Codex, etc.):**
-```bash
-bunx add-skill snowmead/questionably-ultrathink
-```
-
-## Architecture
+## Directory Structure
 
 ```
 questionably-ultrathink/
-├── .claude-plugin/
-│   ├── plugin.json          # Plugin metadata (name, version, author)
-│   └── marketplace.json     # Marketplace registration (source → ./claude-code)
-│
+├── .claude-plugin/           # Root plugin manifest + marketplace.json
 ├── claude-code/              # Claude Code plugin source
-│   ├── .claude-plugin/
-│   │   └── plugin.json       # Plugin manifest
-│   ├── .mcp.json             # MCP server configuration (optional Parallel.ai)
-│   ├── agents/
-│   │   ├── aot-graph-generator.md    # Builds question DAG (no solving)
-│   │   ├── aot-graph-maintainer.md   # Contracts questions with solved answers
-│   │   ├── cov-atomic-solver.md      # Solves ONE question in isolation
-│   │   └── aot-judge.md              # Evaluates answer quality (High-Stakes)
-│   ├── commands/
-│   │   ├── questionably-ultrathink.md
-│   │   ├── decompose.md
-│   │   └── verify.md
-│   └── skills/
-│       └── questionably-ultrathink-skill/
-│           └── SKILL.md
-│
-├── skills/                   # Root skills/ for add-skill discovery
-│   └── questionably-ultrathink/
-│       └── SKILL.md          # Universal skill for other agents
-│
-├── hooks/
-│   └── hooks.json            # Hook configuration
-└── scripts/
-    ├── check-frontmatter.py  # CI: Validate YAML frontmatter
-    └── validate-plugin.sh    # CI: Validate plugin structure
+│   ├── .claude-plugin/       # Inner plugin manifest
+│   ├── .mcp.json             # Optional Parallel.ai MCP servers
+│   ├── agents/               # Subagents (run on haiku model)
+│   ├── commands/             # User-invocable commands (/questionably-ultrathink, /decompose, /verify)
+│   └── skills/               # Orchestration skill
+├── skills/                   # Root skills/ for add-skill discovery (other agents)
+├── hooks/                    # Hook configuration (currently empty)
+└── scripts/                  # CI validation scripts
 ```
 
-## How Components Connect
+## Component Architecture
 
-1. **Commands** (`/questionably-ultrathink`, `/decompose`, `/verify`) are entry points that invoke either the skill or agents directly
-2. **Skill** (`skills/questionably-ultrathink-skill/SKILL.md`) orchestrates the full pipeline by chaining agent calls
+**Commands** → **Skill** → **Agents**
 
-**Note:** The skill is named `questionably-ultrathink-skill` (not `questionably-ultrathink`) to avoid naming collision with the command. When the Skill tool looks up by name, having different names ensures the correct component is loaded.
+- Commands (`/questionably-ultrathink`, `/decompose`, `/verify`) invoke the skill
+- Skill (`questionably-ultrathink-skill`) orchestrates by chaining agent calls via `Task` tool
+- Skill named differently from command to avoid naming collision
 
-3. **Agents** are subagents invoked via the `Task` tool with `subagent_type`:
-   - `questionably-ultrathink:aot-graph-generator` - Builds question DAG (no solving)
-   - `questionably-ultrathink:aot-graph-maintainer` - Contracts questions with solved answers
-   - `questionably-ultrathink:cov-atomic-solver` - Solves ONE question in isolation
-   - `questionably-ultrathink:aot-judge` - Evaluates answer quality (High-Stakes only)
+**Agents** (invoked with `subagent_type`):
+| Agent | Purpose | Tools |
+|-------|---------|-------|
+| `aot-graph-generator` | Builds question DAG (no solving) | Read, Write, AskUserQuestion |
+| `cov-claim-qs` | Generates claims + verification Qs + pre-creates verifier files (NO fact-checking) | Read, Write |
+| `cov-verifier` | Researches ONE verification Q with zero context (reads pre-created verifier file) | Read, Write, WebSearch, WebFetch, mcp__parallel-search__* |
+| `cov-verification-maintainer` | Cross-checks claims, synthesizes final answer | Read, Write, Edit |
+| `aot-graph-maintainer` | Contracts solved answers INTO dependent questions | Read, Write, Bash |
+| `aot-judge` | Evaluates quality across atoms (High-Stakes only) | Read |
 
-## Plugin File Formats
+**Key insight:** Only `cov-verifier` does actual research/fact-checking.
 
-### Commands (commands/*.md)
-Frontmatter with `name`, `description`, `allowed-tools`. Body contains execution instructions.
+## Core Design: Factored Verification
 
-### Skills (skills/*/SKILL.md)
-Frontmatter with `name`, `description`, optional `hooks`, `allowed-tools`. Body contains detailed orchestration logic.
+The key innovation is **complete isolation** at every step:
 
-### Agents (agents/*.md)
-Frontmatter with `name`, `description`, `model`, `tools`. Body contains agent behavior instructions.
+```
+Graph Generator → creates DAG only (no solving)
+        ↓
+Claim Generator (cov-claim-qs) → generates claims + verification Qs (NO research)
+        │                        pre-creates verifiers/{N}.md with ONLY the question
+        ↓
+Verifiers → read pre-created file, research answer with ZERO context about claims
+        │    (only agents that do fact-checking)
+        ↓
+Verification Maintainer → cross-checks claims vs independent answers
+        │                  synthesizes final answer from verified facts
+        ↓
+Graph Maintainer → contracts solved answers into dependent questions
+```
 
-## Key Implementation Details
-
-- Agents run on `haiku` model for efficiency
-- **True factored execution**: each atomic solver sees ONLY its contracted question
-- Graph Generator creates DAG structure WITHOUT solving (prevents bias contamination)
-- Graph Maintainer "contracts" solved answers INTO dependent questions
-- Each solver spawn is completely isolated from other atoms
-- Follows Markov property: each atom depends only on immediate dependencies
-
-## Architecture: Isolated Solving
-
-The key innovation is **complete isolation**. Traditional approaches have the same agent see all questions/answers, causing bias. UltraThink solves this:
-
-1. **Graph Generator** creates ONLY the DAG of questions (no solving)
-2. **Atomic Solver** answers ONE question per spawn (complete isolation)
-3. **Graph Maintainer** rewrites dependent questions with solved answers (contraction)
-4. Each solver sees ONLY its contracted question - nothing else
-
-**Why this matters:** When a solver answers "How should JWT tokens be stored?", it doesn't know what other questions exist or how they were answered. It only sees the question with dependency answers baked in.
+**Why this matters:** When a verifier answers "What is Redis per-key overhead?", it reads a pre-created file containing ONLY that question. It has no idea this is checking a claim of "90 bytes". It answers independently (finds "96 bytes"), then the maintainer detects the discrepancy and synthesizes the correct answer.
 
 ## Inter-Agent Communication
 
-Agents communicate via files in `.questionably-ultrathink/{session-id}/`:
+Agents communicate via files in `.questionably-ultrathink/{session-id}/`. Each atom has its own folder:
 
 ```
 .questionably-ultrathink/{session-id}/
-├── metadata.md       # DAG structure and session config from Graph Generator
+├── metadata.md              # DAG structure (immutable after creation)
 └── atoms/
-    ├── A1.md         # Atom file (question → solved answer with verification trace)
-    ├── A2.md
-    ├── A3.md         # Contracted questions have "Given..." context inline
-    └── FINAL.md
+    ├── A1/
+    │   ├── question.md      # Written by: graph-generator
+    │   ├── claims.md        # Written by: cov-claim-qs
+    │   ├── answer.md        # Written by: verification-maintainer
+    │   └── verifiers/
+    │       ├── 1.md         # Pre-created by: cov-claim-qs (question only)
+    │       │                # Completed by: cov-verifier (adds answer)
+    │       └── 2.md
+    ├── A2/
+    │   └── ...
+    └── FINAL/
+        └── ...
 ```
 
-**Note:** Contractions happen inline within atom files (via "Given..." prefixes), not in a separate directory.
+**State = File Existence + Content:**
+- `question.md` exists → atom created (by graph-generator)
+- `claims.md` exists → claims generated (by cov-claim-qs)
+- `verifiers/{N}.md` exists with question only → pre-created, ready for verifier
+- `verifiers/{N}.md` has "# Answer" section → verification question answered
+- `answer.md` exists → verification complete (by verification-maintainer)
 
-**Data flow:**
-1. Skill generates session ID and determines rigor level
-2. Skill invokes Graph Generator → writes `metadata.md` with DAG structure + atom files (questions only)
-3. For each level, Skill spawns fresh Atomic Solvers (one per atom, in parallel)
-4. Skill extracts solver output and updates atom files with answer, verification trace, sources, and confidence
-5. Skill invokes Graph Maintainer → rewrites next-level atom questions with "Given..." context
-6. Repeat until FINAL is solved
-7. Synthesize response from all solved atoms
+**No concurrent writes:** Each file written by exactly one agent (verifier files: pre-created by cov-claim-qs, then overwritten by cov-verifier).
 
-**Why files?** Subagents don't share context. Files enable inter-agent communication without bloating context windows.
+**answer.md structure after verification:**
+```markdown
+---
+atom_id: A1
+confidence_score: 0.85
+verification_status: factored
+---
+# Question
+{the question}
+# Answer
+{final answer after incorporating verification}
+# Verification Trace
+## Claim 1: "{claim}"
+- Independent Verification: {verifier answer}
+- Status: VERIFIED | REVISED | REFUTED | UNCERTAIN
+```
 
-**Note on verification traces:** The solver outputs detailed self-verification steps. The skill preserves these traces in atom files for audit purposes, though the final response uses summarized answers.
+## Rigor Levels
 
-## Confidence Markers
+| Level | Re-solve Trigger | Confidence Threshold |
+|-------|------------------|---------------------|
+| Standard | Never | N/A |
+| Thorough | LOW confidence | < 0.4 |
+| High-Stakes | Below HIGH | < 0.7 |
 
-Responses are tagged with: `[VERIFIED]`, `[HIGH CONFIDENCE]`, `[NEEDS EXTERNAL VERIFICATION]`, or `[UNCERTAIN]`
+## Plugin File Formats
+
+**Commands** (commands/*.md): Frontmatter with `description`, optional `allowed-tools`
+**Skills** (skills/*/SKILL.md): Frontmatter with `name`, `description`, `allowed-tools`
+**Agents** (agents/*.md): Frontmatter with `name`, `description`, `model`, `tools`
+
+## Distribution
+
+**Claude Code Marketplace:**
+- Root `.claude-plugin/marketplace.json` points to `./claude-code`
+- Install: `/plugin marketplace add snowmead/questionably-ultrathink`
+
+**add-skill (other agents):**
+- Root `skills/questionably-ultrathink/SKILL.md` enables discovery
+- Install: `bunx add-skill snowmead/questionably-ultrathink`
 
 ## Optional MCP Integration
 
-The plugin includes optional Parallel.ai MCP servers for enhanced web search during verification:
-
-- `parallel-search` - Optimized fact-checking searches
-- `parallel-task` - Deep research capabilities
-
-**Setup:** These servers require OAuth authentication. Run `/mcp` in Claude Code and authenticate with Parallel.ai to enable them.
-
-**Fallback:** The CoVe agent automatically falls back to native `WebSearch` and `WebFetch` tools if Parallel.ai is not authenticated. The plugin works fully without MCP authentication.
-
-## CI/CD
-
-- **validate.yml**: Runs on push/PR to main/develop. Validates plugin structure and frontmatter syntax.
-
-Pre-commit hooks (via lefthook):
-- `format-markdown`: Formats non-plugin markdown files with comrak
-- `validate-plugin`: Runs `claude plugin validate .`
-
-## Marketplace Compatibility
-
-The `.claude-plugin/marketplace.json` at the repo root points to `./claude-code`:
-
-```json
-{
-  "plugins": [{
-    "name": "questionably-ultrathink",
-    "source": "./claude-code"
-  }]
-}
-```
-
-This allows `/plugin marketplace add snowmead/questionably-ultrathink` to work correctly.
-
-## add-skill Compatibility
-
-The root `skills/questionably-ultrathink/` directory enables discovery by `add-skill`:
-
-```bash
-bunx add-skill snowmead/questionably-ultrathink
-```
-
-This installs the skill to agent-specific directories:
-- Claude Code → `.claude/skills/`
-- OpenCode → `.opencode/skill/`
-- Cursor → `.cursor/skills/`
-- Codex → `.codex/skills/`
+Parallel.ai servers for enhanced search: `parallel-search`, `parallel-task`
+- Setup: Run `/mcp`, authenticate with Parallel.ai
+- Fallback: Native `WebSearch`/`WebFetch` if not authenticated
