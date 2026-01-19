@@ -42,8 +42,9 @@ The skill automatically activates when you use trigger phrases:
 ## How It Works
 
 1. **Atom of Thoughts (AoT)** - Decomposes complex problems into atomic sub-questions organized as a DAG
-2. **Chain of Verification (CoVe)** - Verifies each answer through independent questioning
+2. **Chain of Verification (CoVe)** - Verifies each answer through independent questioning with factored execution
 3. **Isolated Solving** - Each atomic question solved in complete isolation to prevent bias
+4. **Factored Verification** - Verification questions answered by isolated verifiers with zero context about claims
 
 ### Architecture
 
@@ -66,10 +67,35 @@ The skill automatically activates when you use trigger phrases:
 │      (A1)       │ │      (A2)       │ │      (A3)       │
 │   [ISOLATED]    │ │   [ISOLATED]    │ │   [ISOLATED]    │
 │  Sees only A1   │ │  Sees only A2   │ │  Sees only A3   │
-│  + self-verify  │ │  + self-verify  │ │  + self-verify  │
+│  Outputs:       │ │  Outputs:       │ │  Outputs:       │
+│  - Answer       │ │  - Answer       │ │  - Answer       │
+│  - Claims       │ │  - Claims       │ │  - Claims       │
+│  - Verify Qs    │ │  - Verify Qs    │ │  - Verify Qs    │
+└─────────────────┘ └─────────────────┘ └─────────────────┘
+           │                  │                  │
+           ▼                  ▼                  ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                   Factored Verification                         │
+│  For each claim, spawn ISOLATED verifier with ONLY the question │
+│  Verifier has ZERO context about the original claim             │
+└─────────────────────────────────────────────────────────────────┘
+           │                  │                  │
+           ▼                  ▼                  ▼
+┌─────────────────┐ ┌─────────────────┐ ┌─────────────────┐
+│    Verifier     │ │    Verifier     │ │    Verifier     │
+│  "What is X?"   │ │  "When was Y?"  │ │  "How does Z?"  │
+│  [NO CONTEXT]   │ │  [NO CONTEXT]   │ │  [NO CONTEXT]   │
 └─────────────────┘ └─────────────────┘ └─────────────────┘
            │                  │                  │
            └──────────────────┼──────────────────┘
+                              ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                 Verification Maintainer                         │
+│     Cross-checks claims vs independent verifier answers         │
+│     Marks: VERIFIED | REVISED | REFUTED | UNCERTAIN             │
+│     Updates atom files with verification trace                  │
+└─────────────────────────────────────────────────────────────────┘
+                              │
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                    Graph Maintainer                             │
@@ -87,7 +113,7 @@ The skill automatically activates when you use trigger phrases:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Key insight:** Each Atomic Solver runs in complete isolation. It only sees its own question (with dependency answers baked in). This prevents bias contamination that occurs when one solver knows about other questions.
+**Key insight:** Factored verification from the CoVe paper. Each verifier answers a verification question with ZERO knowledge of the original claim. This prevents bias - when verifiers don't know the "expected" answer, they can't be biased toward confirming it.
 
 ### Rigor Levels
 
