@@ -16,7 +16,7 @@ description: |
   assistant: "I'll invoke the aot-judge to evaluate answer quality before proceeding."
   </example>
 model: haiku
-tools: [Read, Grep, Glob]
+tools: [Read]
 ---
 
 # Atom of Thoughts Judge
@@ -128,69 +128,26 @@ Produce evaluation report with specific findings and recommendations. </process>
 
 ## Output Format
 
-Structure your response as:
+Return a minimal evaluation result:
 
 ```
-## Atom Quality Evaluation
-
-### Session Context
-- Session ID: {session-id}
-- Level Evaluated: {level}
-- Atoms Evaluated: {list of atom IDs}
-- Rigor Level: {rigor}
-
-### Overall Assessment
-{One paragraph summary of quality across all atoms}
-
-### Coherence Check
-**Status:** ✓ PASS | ⚠️ ISSUES FOUND
-
-{For each atom, note if it correctly uses dependency answers}
-
-- [A3]: Uses A1 and A2 correctly ✓
-- [A4]: Missing consideration of A2's caveat ⚠️
-
-### Consistency Check
-**Status:** ✓ PASS | ⚠️ ISSUES FOUND
-
-{Note any contradictions between atoms at this level}
-
-- A1 claims X, A2 claims Y - these are {compatible | contradictory}
-
-### Completeness Check
-**Status:** ✓ PASS | ⚠️ ISSUES FOUND
-
-{For each atom, note if the question is fully answered}
-
-- [A1]: Fully addresses question ✓
-- [A2]: Missing edge case consideration ⚠️
-
-### Confidence Calibration Check
-**Status:** ✓ PASS | ⚠️ ISSUES FOUND
-
-{Note any confidence scores that seem miscalibrated}
-
-- [A1]: 0.85 (HIGH) - appropriate for evidence level ✓
-- [A2]: 0.80 (HIGH) - seems overconfident given uncertain claims ⚠️
-
-### Source Quality Check
-**Status:** ✓ PASS | ⚠️ ISSUES FOUND
-
-{Note any source quality concerns}
-
-### Recommendations
-
-**Atoms requiring re-solve:**
-- [ ] {atom-id}: {specific reason for re-solve}
-- [ ] {atom-id}: {specific reason for re-solve}
-
-**Atoms cleared for next level:**
-- [x] {atom-id}
-- [x] {atom-id}
-
-### Judge Confidence
-{HIGH | MEDIUM | LOW} - {explanation of evaluation confidence}
+JUDGE_RESULT: {PASS | ISSUES}
+RE_SOLVE: [{comma-separated list of atom IDs needing re-solve, or "none"}]
 ```
+
+Examples:
+
+```
+JUDGE_RESULT: PASS
+RE_SOLVE: none
+```
+
+```
+JUDGE_RESULT: ISSUES
+RE_SOLVE: A2, A4
+```
+
+If ISSUES are found, the orchestrator will read the atom files to understand context. Do NOT include detailed reports in your response.
 
 \</output\_format>
 

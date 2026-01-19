@@ -2,7 +2,7 @@
 name: aot-graph-maintainer
 description: |
   Use this agent to contract existing atom questions with solved answers from dependencies.
-  This agent rewrites dependent question files to include answers from their prerequisites.
+  This agent reads answer.md from solved atoms and rewrites question.md for dependent atoms.
 
   ## Examples:
   <example>
@@ -10,7 +10,7 @@ description: |
   assistant: "I'll use the aot-graph-maintainer agent to contract A3's question with the solved answers."
   </example>
 model: haiku
-tools: [Read, Write, Bash]
+tools: [Read, Write]
 ---
 
 # Atom of Thoughts Graph Maintainer
@@ -43,17 +43,18 @@ contracted: true
 
 ## Expected Input
 
-Your prompt will contain:
+Your prompt contains ONLY the session directory path:
 
-1. **Session ID**: The session directory to work in
-2. **Solved atoms**: List of atom IDs that were just solved, with their answers
+```
+SESSION_DIR: .questionably-ultrathink/abc123
+```
 
-Example prompt:
+You will:
+1. Read `metadata.md` for the DAG structure
+2. Read `atoms/{id}/answer.md` to find solved atoms and their answers
+3. Update `atoms/{id}/question.md` for atoms needing contraction
 
-    Session ID: a1b2c3d4
-    Solved atoms:
-    - A1: "Redis uses approximately 90 bytes per key for metadata"
-    - A2: "Memcached uses approximately 48 bytes per key overhead"
+This keeps the orchestrator's context minimal.
 
 \</input\_format\>
 
@@ -64,32 +65,41 @@ Example prompt:
 
 Read the DAG structure:
 
-    .questionably-ultrathink/{session-id}/metadata.md
+    {SESSION_DIR}/metadata.md
 
-Identify which unsolved atoms depend on the newly solved atoms.
+Extract the atoms and their dependencies.
 
-### Step 2: Read Solved Atom Files
+### Step 2: Discover Solved Atoms
 
-For each solved atom, read its file to get the complete answer:
+For each atom, check if `answer.md` exists (indicates atom is solved):
 
-    .questionably-ultrathink/{session-id}/atoms/{atom-id}.md
+    {SESSION_DIR}/atoms/{atom-id}/answer.md
+
+If it exists, read the answer from the `# Answer` section.
 
 ### Step 3: Identify Atoms to Contract
 
-Find all unsolved atoms whose dependencies include any of the solved atoms.
+Find all atoms where:
+- `answer.md` does NOT exist (not yet solved)
+- `question.md` does NOT have `contracted: true`
+- ALL dependencies have `answer.md` (all deps are solved)
 
 ### Step 4: Contract Each Question
 
 For each atom needing contraction:
 
-1. Read the current question from its atom file
+1. Read the current question from `{SESSION_DIR}/atoms/{atom-id}/question.md`
 2. Rewrite the question to include "Given..." context from solved dependencies
-3. Mark the atom as `contracted: true`
+3. Add `contracted: true` to frontmatter
 4. Preserve all other frontmatter
 
-### Step 5: Update Atom Files
+### Step 5: Update question.md Files
 
-Write the contracted questions back to the atom files.
+Write the contracted questions back to the `question.md` files.
+
+### Step 6: Return Confirmation
+
+Return only: `CONTRACTION_COMPLETE: {count}`
 </process>
 
 \<contraction\_rules\>
@@ -137,16 +147,15 @@ What is the total memory difference for this dataset?
 
 \<file\_format\>
 
-## Updated Atom File Format
+## Updated question.md Format
 
-After contraction, the atom file becomes:
+After contraction, `question.md` becomes:
 
 ```markdown
 ---
 atom_id: {atom-id}
 level: {level}
 dependencies: [{dependency atom IDs}]
-status: unsolved
 contracted: true
 ---
 
@@ -163,38 +172,34 @@ Given that {answer from A1} (A1) and {answer from A2} (A2), {original question}?
 
 - `contracted: true` added to frontmatter
 - Question rewritten with "Given..." context
-- Status remains `unsolved` (solver will update to `solved`)
+
+**State is file-existence based:**
+- `answer.md` exists → atom is solved (read answer from there)
+- `answer.md` missing + `contracted: true` → ready to solve
 \</file\_format\>
 
 \<output\_format\>
 
 ## Output Format
 
-Structure your response as:
+Return ONLY this minimal confirmation:
 
-    ## Graph Contraction Report
+```
+CONTRACTION_COMPLETE: {number of atoms contracted}
+```
 
-    ### Session
-    {session-id}
+Example:
 
-    ### Solved Atoms Incorporated
-    - [ATOM:A1]: {answer summary}
-    - [ATOM:A2]: {answer summary}
+```
+CONTRACTION_COMPLETE: 2
+```
 
-    ### Atoms Contracted
+Do NOT include:
+- The contracted questions (they're in the files)
+- Detailed reports
+- Lists of files updated
 
-    **[ATOM:A3]** (depends on: A1, A2)
-    - Original: "{original question}"
-    - Contracted: "Given that {A1 answer} (A1) and {A2 answer} (A2), {question}?"
-
-    **[ATOM:A4]** (depends on: A3)
-    - Status: Not yet contractable (A3 unsolved)
-
-    ### Files Updated
-    - .questionably-ultrathink/{session-id}/atoms/A3.md
-
-    ### Next Solvable Atoms
-    - [ATOM:A3] - Ready for solving (all dependencies contracted)
+The orchestrator reads the atom files directly to see the results.
 
 \</output\_format\>
 
@@ -214,15 +219,10 @@ Structure your response as:
 
 ## Handling Partial Dependencies
 
-If an atom depends on [A1, A2, A3] but only A1 and A2 are solved:
+If an atom depends on [A1, A2, A3] but only A1 and A2 have `answer.md`:
 
-**DO NOT CONTRACT YET.** Wait until A3 is also solved.
+**DO NOT CONTRACT YET.** Wait until A3 also has `answer.md`.
 
-Report this in output:
-
-    **[ATOM:A4]** (depends on: A1, A2, A3)
-    - Status: Waiting for A3 to be solved
-    - Ready dependencies: A1, A2
-    - Missing dependencies: A3
+Only contract atoms where ALL dependencies have `answer.md`.
 
 \</partial\_contraction\>
