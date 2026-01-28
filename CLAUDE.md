@@ -113,87 +113,22 @@ Agents communicate via files in `.questionably-ultrathink/{session-id}/`. Each a
 
 **No concurrent writes:** Each file written by exactly one agent (verifier files: pre-created by cove-claim-qs, then overwritten by cove-verifier).
 
-**answer.md structure after verification (schema v2):**
+**answer.md structure after verification:**
 ```markdown
 ---
-schema_version: 2
 atom_id: A1
 confidence_score: 0.85
 verification_status: factored
-question_text: "{the question}"
-answer_text: "{final answer after incorporating verification}"
-confidence_rationale:
-  rule: "min(claim_confidence) with penalties for REFUTED/UNCERTAIN, weighted by impact"
-  inputs: {claim_confidences: [HIGH, HIGH], statuses: [VERIFIED, REVISED], impacts: [HIGH, MEDIUM]}
-  notes: "{explanation of how confidence was computed}"
-claims:
-  - claim_id: "A1:1"
-    claim_number: 1
-    claim_text: "{original claim}"
-    verification_question: "{the verification question}"
-    verification_answer: "{answer from verifier}"
-    verifier_confidence: HIGH | MEDIUM | LOW
-    status: VERIFIED | REVISED | REFUTED | UNCERTAIN
-    impact: HIGH | MEDIUM | LOW
-    revision_note: null | "{what changed}"
-    corrected_claim_text: null | "{corrected version if REVISED/REFUTED}"
-    before: null | {value: N, unit: "bytes"}
-    after: null | {value: N, unit: "bytes"}
-    uncertainty_reason: null | "{reason if UNCERTAIN}"
-    sources:
-      - url: "{source URL}"
-        description: "{what it confirmed}"
-    evidence:
-      - source_url: "{URL}"
-        quote: "{exact quote from source}"
-        locator: "{section/page/line}"
-        why_it_supports: "{explanation}"
-verification_summary:
-  verified: {N}
-  revised: {N}
-  refuted: {N}
-  uncertain: {N}
-dependency_effects:
-  - dep_atom_id: A1
-    effect: SUPPORTS | CONSTRAINS | CHANGES | CONTRADICTS
-    note: "{how this dependency affected the answer}"
-sources:
-  - url: "{combined source URL}"
-    description: "{description}"
 ---
 # Question
 {the question}
 # Answer
 {final answer after incorporating verification}
-# Confidence Rationale
-{notes}
 # Verification Trace
-## Claim 1: "{claim}" (Impact: {impact})
-- **Verification Q:** {verification_question}
-- **Independent Verification:** {verification_answer}
-- **Verifier Confidence:** {verifier_confidence}
-- **Status:** {status}
-- **Impact:** {impact}
-### Evidence
-- **Quote:** "{quote}"
-- **Source:** {source_url}
-- **Why:** {why_it_supports}
-## Verification Summary
-- Claims Verified: {N}
-- Claims Revised: {N}
-# Dependency Effects
-## {dep_atom_id} ({effect})
-{note}
+## Claim 1: "{claim}"
+- Independent Verification: {verifier answer}
+- Status: VERIFIED | REVISED | REFUTED | UNCERTAIN
 ```
-
-**Key schema v2 additions:**
-- `schema_version`: Enables backward compatibility
-- `claim_id`: Stable ID for each claim (e.g., `A1:1`)
-- `impact`: How much each claim affects the overall answer
-- `evidence`: Embedded quotes/locators from verification research
-- `confidence_rationale`: Explains how confidence score was computed
-- `dependency_effects`: How upstream atoms affected this answer (for contracted questions)
-- `corrected_claim_text`, `before`/`after`, `uncertainty_reason`: Structured correction data
 
 ## Rigor Levels
 
