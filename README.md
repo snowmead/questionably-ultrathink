@@ -17,7 +17,7 @@ Advanced reasoning plugin integrating Atom of Thoughts (AoT) and Chain of Verifi
 ### Other AI Agents (OpenCode, Cursor, Codex, etc.)
 
 ```bash
-bunx add-skill snowmead/questionably-ultrathink
+bunx skills add snowmead/questionably-ultrathink
 ```
 
 This installs the skill to your agent's skill directory automatically.
